@@ -2,6 +2,7 @@ package tool;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
+import parser.SimpleCParser;
 
 import java.util.List;
 
@@ -19,13 +20,26 @@ public class ExpressionUtils {
     public String infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args, int i) {
         return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
                 String.format("(%s %s %s)",
-                        cOperatorToSMT(ops.get(i).getText()),        // Add the operator (* or + etc)
+                        cOperatorToSMT(ops.get(i).getText()),         // Add the operator (* or + etc)
                         visitor.visit(args.get(i)),                   // Handle this expression
-                        infixToPrefix(ops, args, i + 1)      // Recurse for next expression
+                        infixToPrefix(ops, args, i + 1)               // Recurse for next expression
                 );
     }
 
-    private String cOperatorToSMT(String operator) {
+    public String ternaryToITE(List<? extends ParserRuleContext> args) {
+        return ternaryToITE(args, 0);
+    }
+
+    public String ternaryToITE(List<? extends ParserRuleContext> args, int i) {
+        return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
+                String.format("(ite %s %s %s)",
+                        visitor.visit(args.get(i)),
+                        visitor.visit(args.get(i + 1)),
+                        ternaryToITE(args, i + 2)
+                );
+    }
+
+    public String cOperatorToSMT(String operator) {
         switch (operator) {
             case "==":
                 return "=";

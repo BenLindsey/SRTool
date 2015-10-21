@@ -66,56 +66,34 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
-        return getDeclarationString(getCurrentVariable(ctx.ident.getText()));
+        return getDeclarationString(getFreshVariable(ctx.ident.getText()));
     }
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return getDeclarationString(getCurrentVariable(ctx.ident.getText()));
+        return getDeclarationString(getFreshVariable(ctx.ident.getText()));
     }
 
     @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
+        final String expression = visit(ctx.expr());
+
         String currentVariable = visit(ctx.varref());
         String freshVariable = getFreshVariable(currentVariable);
         modset.add(currentVariable);
+        
         return getDeclarationString(freshVariable) +
-               "(assert (= " + getCurrentVariable(currentVariable) + " " + visit(ctx.expr()) + "))\n";
+               "(assert (= " + freshVariable + " " + expression + "))\n";
+    }
+
+    @Override
+    public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
+        return getDeclarationString(getFreshVariable(ctx.var.getText()));
     }
 
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
         return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
-    }
-
-    @Override
-    public String visitLorExpr(SimpleCParser.LorExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLorExpr(ctx);
-    }
-
-    @Override
-    public String visitLandExpr(SimpleCParser.LandExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLandExpr(ctx);
-    }
-
-    @Override
-    public String visitBorExpr(SimpleCParser.BorExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBorExpr(ctx);
-    }
-
-    @Override
-    public String visitBandExpr(SimpleCParser.BandExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBandExpr(ctx);
-    }
-
-    @Override
-    public String visitRelExpr(SimpleCParser.RelExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
-    }
-
-    @Override
-    public String visitShiftExpr(SimpleCParser.ShiftExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitShiftExpr(ctx);
     }
 
     @Override
@@ -157,6 +135,41 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         }
 
         return builder.toString();
+    }
+
+    @Override
+    public String visitTernExpr(SimpleCParser.TernExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.ternaryToITE(ctx.args) : super.visitTernExpr(ctx);
+    }
+
+    @Override
+    public String visitLorExpr(SimpleCParser.LorExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLorExpr(ctx);
+    }
+
+    @Override
+    public String visitLandExpr(SimpleCParser.LandExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLandExpr(ctx);
+    }
+
+    @Override
+    public String visitBorExpr(SimpleCParser.BorExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBorExpr(ctx);
+    }
+
+    @Override
+    public String visitBandExpr(SimpleCParser.BandExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBandExpr(ctx);
+    }
+
+    @Override
+    public String visitRelExpr(SimpleCParser.RelExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
+    }
+
+    @Override
+    public String visitShiftExpr(SimpleCParser.ShiftExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitShiftExpr(ctx);
     }
 
     @Override
