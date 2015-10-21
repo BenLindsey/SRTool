@@ -3,9 +3,24 @@ package tool;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
+
+    Map<String, Integer> SSAIdsByName = new HashMap<>();
+
+    private String fresh(String variable) {
+        Integer id = SSAIdsByName.get(variable);
+
+        id = id == null ? 0 : id;
+
+        SSAIdsByName.put(variable, id + 1);
+
+        return variable + id;
+    }
+
     @Override
     public String visitVarIdentifier(SimpleCParser.VarIdentifierContext ctx) {
         return ctx.name.getText();
