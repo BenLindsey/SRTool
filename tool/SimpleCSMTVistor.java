@@ -74,10 +74,13 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
+        final String expression = visit(ctx.expr());
+
         String currentVariable = visit(ctx.varref());
         String freshVariable = getFreshVariable(currentVariable);
+
         return getDeclarationString(freshVariable) +
-               "(assert (= " + getCurrentVariable(currentVariable) + " " + visit(ctx.expr()) + "))\n";
+               "(assert (= " + freshVariable + " " + expression + "))\n";
     }
 
     @Override
@@ -88,6 +91,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
         return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
+    }
+
+    @Override
+    public String visitTernExpr(SimpleCParser.TernExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.ternaryToITE(ctx.args) : super.visitTernExpr(ctx);
     }
 
     @Override
