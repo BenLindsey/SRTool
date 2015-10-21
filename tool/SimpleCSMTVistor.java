@@ -12,7 +12,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
     Deque<String> predicate = new ArrayDeque<>();
-    List<String> modset = new ArrayList<>();
+    Set<String> modset = new HashSet<>();
 
     private String getFreshVariable(String variable) {
         Integer id = SSAIdsByName.get(variable);
@@ -125,8 +125,8 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
         String condition = visit(ctx.condition);
 
-        List<String> currentModset = modset;
-        List<String> newModset = new ArrayList<String>();
+        Set<String> currentModset = modset;
+        Set<String> newModset = new HashSet<String>();
         modset = newModset;
 
         predicate.push(condition);
