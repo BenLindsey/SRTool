@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import com.sun.org.apache.xpath.internal.SourceTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -45,6 +46,8 @@ public class SRTool {
 			VCGenerator vcgen = new VCGenerator(proc);
 			String vc = vcgen.generateVC().toString();
 
+			System.out.println("Running:\n" + vc);
+
 			ProcessExec process = new ProcessExec("./z3", "-smt2", "-in");
 			String queryResult = "";
 			try {
@@ -53,7 +56,9 @@ public class SRTool {
 				System.out.println("UNKNOWN");
 				System.exit(1);
 			}
-			
+
+			System.out.println("Result:\n" + queryResult);
+
 			if (queryResult.startsWith("sat")) {
 				System.out.println("INCORRECT");
 				System.exit(0);
