@@ -4,9 +4,9 @@
 int swagger() {
     int i;
 
-    i = 1;
+    i = 1 + 2;
     
-    assert(i == 1);
+    assert(i == 3);
     
     return 0;
 }
