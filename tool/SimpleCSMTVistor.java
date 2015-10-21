@@ -4,12 +4,12 @@ import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
-    Map<String, Integer> SSAIdsByName = new HashMap<>();
+    private final Map<String, Integer> SSAIdsByName = new HashMap<>();
+    private String returnExpr;
 
     private String getFreshVariable(String variable) {
         Integer id = SSAIdsByName.get(variable);
@@ -39,13 +39,24 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     public String visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
         StringBuilder statements = new StringBuilder();
 
+
         for(SimpleCParser.StmtContext statement : ctx.stmts) {
             statements.append(visit(statement));
+        }
+
+        returnExpr = visit(ctx.returnExpr);
+
+        for (SimpleCParser.PrepostContext prepost : ctx.contract) {
+            statements.append(visitEnsures(prepost.ensures()));
         }
 
         return statements.toString();
     }
 
+    @Override
+    public String visitEnsures(SimpleCParser.EnsuresContext ctx) {
+        return "(assert (not " + visit(ctx.condition) + "))\n";
+    }
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
@@ -84,6 +95,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         return ctx.args.size() == 2 ?
                 "(bvmul " + visit(ctx.args.get(0)) + " " + visit(ctx.args.get(1)) + ")" :
                 super.visitMulExpr(ctx);
+    }
+
+    @Override
+    public String visitResultExpr(SimpleCParser.ResultExprContext ctx) {
+        return returnExpr;
     }
 
     @Override
