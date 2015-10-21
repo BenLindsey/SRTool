@@ -14,9 +14,9 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private String getFreshVariable(String variable) {
         Integer id = SSAIdsByName.get(variable);
 
-        id = id == null ? 0 : id;
+        id = id == null ? 0 : id + 1;
 
-        SSAIdsByName.put(variable, id + 1);
+        SSAIdsByName.put(variable, id);
 
         return variable + id;
     }
@@ -27,9 +27,18 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         return id == null ? getFreshVariable(variable) : variable + id;
     }
 
+    private String getDeclarationString(String variable) {
+        return "(declare-fun " + variable  + " () (_ BitVec 32))\n";
+    }
+
     @Override
     public String visitVarIdentifier(SimpleCParser.VarIdentifierContext ctx) {
         return ctx.name.getText();
+    }
+
+    @Override
+    public String visitVarrefExpr(SimpleCParser.VarrefExprContext ctx) {
+        return getCurrentVariable(super.visitVarrefExpr(ctx));
     }
 
     @Override
@@ -61,12 +70,15 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return "(declare-fun " + visit(ctx.varIdentifier())  + " () (_ BitVec 32))\n";
+        return getDeclarationString(visit(ctx.varIdentifier()));
     }
 
     @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
-        return "(assert (= " + visit(ctx.varref()) + " " + visit(ctx.expr()) + "))\n";
+        String currentVariable = visit(ctx.varref());
+        String freshVariable = getFreshVariable(currentVariable);
+        return getDeclarationString(freshVariable) +
+               "(assert (= " + getCurrentVariable(currentVariable) + " " + visit(ctx.expr()) + "))\n";
     }
 
     @Override
