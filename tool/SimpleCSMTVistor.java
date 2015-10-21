@@ -59,6 +59,16 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     }
 
     @Override
+    public String visitAddExpr(SimpleCParser.AddExprContext ctx) {
+        return super.visitAddExpr(ctx);
+    }
+
+    @Override
+    public String visitMulExpr(SimpleCParser.MulExprContext ctx) {
+        return super.visitMulExpr(ctx);
+    }
+
+    @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
         return "(assert (= " + visit(ctx.varref()) + " " + visit(ctx.expr()) + "))\n";
     }
