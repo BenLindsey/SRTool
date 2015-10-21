@@ -64,12 +64,12 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
-        return "(declare-fun " + visit(ctx.varIdentifier())  + " () (_ BitVec 32))\n";
+        return getDeclarationString(getFreshVariable(visit(ctx.varIdentifier())));
     }
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return getDeclarationString(visit(ctx.varIdentifier()));
+        return getDeclarationString(getFreshVariable(visit(ctx.varIdentifier())));
     }
 
     @Override
@@ -78,6 +78,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         String freshVariable = getFreshVariable(currentVariable);
         return getDeclarationString(freshVariable) +
                "(assert (= " + getCurrentVariable(currentVariable) + " " + visit(ctx.expr()) + "))\n";
+    }
+
+    @Override
+    public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
+        return getDeclarationString(getFreshVariable(ctx.var.getText()));
     }
 
     @Override
