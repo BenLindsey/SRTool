@@ -76,6 +76,26 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     }
 
     @Override
+    public String visitLorExpr(SimpleCParser.LorExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLorExpr(ctx);
+    }
+
+    @Override
+    public String visitLandExpr(SimpleCParser.LandExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLandExpr(ctx);
+    }
+
+    @Override
+    public String visitBorExpr(SimpleCParser.BorExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBorExpr(ctx);
+    }
+
+    @Override
+    public String visitBandExpr(SimpleCParser.BandExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBandExpr(ctx);
+    }
+
+    @Override
     public String visitRelExpr(SimpleCParser.RelExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
     }
