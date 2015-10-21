@@ -7,7 +7,9 @@ import java.util.*;
 
 public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
-    Map<String, Integer> SSAIdsByName = new HashMap<>();
+    private final Map<String, Integer> SSAIdsByName = new HashMap<>();
+    private String returnExpr;
+    private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
     Deque<String> predicate = new ArrayDeque<>();
     List<String> modset = new ArrayList<>();
@@ -48,9 +50,19 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
             statements.append(visit(statement));
         }
 
+        returnExpr = visit(ctx.returnExpr);
+
+        for (SimpleCParser.PrepostContext prepost : ctx.contract) {
+            statements.append(visitEnsures(prepost.ensures()));
+        }
+
         return statements.toString();
     }
 
+    @Override
+    public String visitEnsures(SimpleCParser.EnsuresContext ctx) {
+        return "(assert (not " + visit(ctx.condition) + "))\n";
+    }
 
     @Override
     public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
@@ -73,7 +85,37 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        return "(assert (not " + super.visitAssertStmt(ctx)  + "))\n";
+        return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
+    }
+
+    @Override
+    public String visitLorExpr(SimpleCParser.LorExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLorExpr(ctx);
+    }
+
+    @Override
+    public String visitLandExpr(SimpleCParser.LandExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLandExpr(ctx);
+    }
+
+    @Override
+    public String visitBorExpr(SimpleCParser.BorExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBorExpr(ctx);
+    }
+
+    @Override
+    public String visitBandExpr(SimpleCParser.BandExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBandExpr(ctx);
+    }
+
+    @Override
+    public String visitRelExpr(SimpleCParser.RelExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
+    }
+
+    @Override
+    public String visitShiftExpr(SimpleCParser.ShiftExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitShiftExpr(ctx);
     }
 
     @Override
@@ -119,23 +161,22 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitEqualityExpr(SimpleCParser.EqualityExprContext ctx) {
-        return ctx.args.size() == 2 ?
-                "(= " + visit(ctx.args.get(0)) + " " + visit(ctx.args.get(1)) + ")" :
-                super.visitEqualityExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitEqualityExpr(ctx);
     }
 
     @Override
     public String visitAddExpr(SimpleCParser.AddExprContext ctx) {
-        return ctx.args.size() == 2 ?
-                "(bvadd " + visit(ctx.args.get(0)) + " " + visit(ctx.args.get(1)) + ")" :
-                super.visitAddExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitAddExpr(ctx);
     }
 
     @Override
     public String visitMulExpr(SimpleCParser.MulExprContext ctx) {
-        return ctx.args.size() == 2 ?
-                "(bvmul " + visit(ctx.args.get(0)) + " " + visit(ctx.args.get(1)) + ")" :
-                super.visitMulExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitMulExpr(ctx);
+    }
+
+    @Override
+    public String visitResultExpr(SimpleCParser.ResultExprContext ctx) {
+        return returnExpr;
     }
 
     @Override

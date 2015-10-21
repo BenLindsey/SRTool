@@ -29,6 +29,7 @@ public class VCGenerator {
 		result.append(proc.accept(visitor));
 
 		result.append("\n(check-sat)\n");
+		result.append("(get-model)\n");
 
 		return result;
 	}
