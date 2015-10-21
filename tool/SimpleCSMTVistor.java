@@ -1,5 +1,7 @@
 package tool;
 
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 
@@ -9,7 +11,9 @@ import java.util.Map;
 
 public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
-    Map<String, Integer> SSAIdsByName = new HashMap<>();
+    private SMTUtils utils = new SMTUtils(this);
+
+    private Map<String, Integer> SSAIdsByName = new HashMap<>();
 
     private String getFreshVariable(String variable) {
         Integer id = SSAIdsByName.get(variable);
@@ -71,28 +75,22 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        return "(assert (not " + super.visitAssertStmt(ctx)  + "))\n";
+        return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
     }
 
     @Override
     public String visitEqualityExpr(SimpleCParser.EqualityExprContext ctx) {
-        return ctx.args.size() == 2 ?
-                "(= " + visit(ctx.args.get(0)) + " " + visit(ctx.args.get(1)) + ")" :
-                super.visitEqualityExpr(ctx);
+        return ctx.args.size() >= 2 ? utils.infixToPrefix(ctx.ops, ctx.args) : super.visitEqualityExpr(ctx);
     }
 
     @Override
     public String visitAddExpr(SimpleCParser.AddExprContext ctx) {
-        return ctx.args.size() == 2 ?
-                "(bvadd " + visit(ctx.args.get(0)) + " " + visit(ctx.args.get(1)) + ")" :
-                super.visitAddExpr(ctx);
+        return ctx.args.size() >= 2 ? utils.infixToPrefix(ctx.ops, ctx.args) : super.visitAddExpr(ctx);
     }
 
     @Override
     public String visitMulExpr(SimpleCParser.MulExprContext ctx) {
-        return ctx.args.size() == 2 ?
-                "(bvmul " + visit(ctx.args.get(0)) + " " + visit(ctx.args.get(1)) + ")" :
-                super.visitMulExpr(ctx);
+        return ctx.args.size() >= 2 ? utils.infixToPrefix(ctx.ops, ctx.args) : super.visitMulExpr(ctx);
     }
 
     @Override
