@@ -11,7 +11,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     Map<String, Integer> SSAIdsByName = new HashMap<>();
 
-    private String fresh(String variable) {
+    private String getFreshVariable(String variable) {
         Integer id = SSAIdsByName.get(variable);
 
         id = id == null ? 0 : id;
@@ -19,6 +19,12 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         SSAIdsByName.put(variable, id + 1);
 
         return variable + id;
+    }
+
+    private String getCurrentVariable(String variable) {
+        Integer id = SSAIdsByName.get(variable);
+
+        return id == null ? getFreshVariable(variable) : variable + id;
     }
 
     @Override
