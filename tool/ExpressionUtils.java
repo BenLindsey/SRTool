@@ -6,10 +6,10 @@ import parser.SimpleCVisitor;
 
 import java.util.List;
 
-public class SMTUtils {
+public class ExpressionUtils {
     private SimpleCSMTVistor vistor;
 
-    public SMTUtils(SimpleCSMTVistor vistor) {
+    public ExpressionUtils(SimpleCSMTVistor vistor) {
         this.vistor = vistor;
     }
 
@@ -48,6 +48,24 @@ public class SMTUtils {
 
             case "%":
                 return "bvsmod";  //todo should this be signed or unsigned?
+
+            case "<<":
+                return "bvshl";
+
+            case ">>":
+                return "bvashr";  //todo should this be signed or unsigned?
+
+            case "<":
+                return "bvslt";   //todo should this be signed or unsigned?
+
+            case ">":
+                return "bvsgt";   //todo should this be signed or unsigned?
+
+            case ">=":
+                return "bvsge";   //todo should this be signed or unsigned?
+
+            case "<=":
+                return "bvsle";   //todo should this be signed or unsigned?
 
             default:
                 return operator;
