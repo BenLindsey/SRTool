@@ -42,7 +42,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         final List<SimpleCParser.RelExprContext> args = ctx.args;
 
         if(args.size() == 2) {
-            return "(= " + visitRelExpr(args.get(0)) + " " + visitRelExpr(args.get(1)) + ")";
+            return "(= " + visit(args.get(0)) + " " + visit(args.get(1)) + ")";
         }
 
         return super.visitEqualityExpr(ctx);
@@ -53,7 +53,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         StringBuilder statements = new StringBuilder();
 
         for(SimpleCParser.StmtContext statement : ctx.stmts) {
-            statements.append(visitStmt(statement));
+            statements.append(visit(statement));
         }
 
         return statements.toString();
@@ -61,12 +61,12 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return "(declare-fun " + visitVarIdentifier(ctx.varIdentifier())  + " () (_ BitVec 32))\n";
+        return "(declare-fun " + visit(ctx.varIdentifier())  + " () (_ BitVec 32))\n";
     }
 
     @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
-        return "(assert (= " + visitVarref(ctx.varref()) + " " + visitExpr(ctx.expr()) + "))\n";
+        return "(assert (= " + visit(ctx.varref()) + " " + visit(ctx.expr()) + "))\n";
     }
 
     @Override
