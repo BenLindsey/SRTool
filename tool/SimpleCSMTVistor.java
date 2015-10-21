@@ -36,11 +36,20 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     public String visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
         StringBuilder statements = new StringBuilder();
 
+        for(SimpleCParser.FormalParamContext param : ctx.formals) {
+            statements.append(visit(param));
+        }
+
         for(SimpleCParser.StmtContext statement : ctx.stmts) {
             statements.append(visit(statement));
         }
 
         return statements.toString();
+    }
+
+    @Override
+    public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
+        return "(declare-fun " + visit(ctx.varIdentifier())  + " () (_ BitVec 32))\n";
     }
 
     @Override

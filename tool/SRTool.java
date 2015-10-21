@@ -43,7 +43,7 @@ public class SRTool {
 		assert ctx.procedures.size() == 1; // For Part 1 of the coursework, this can be assumed
 				
 		for(ProcedureDeclContext proc : ctx.procedures) {
-			VCGenerator vcgen = new VCGenerator(proc);
+			VCGenerator vcgen = new VCGenerator(proc, ctx.globals);
 			String vc = vcgen.generateVC().toString();
 
 			System.out.println("Running:\n" + vc);

@@ -3,7 +3,9 @@
 
 int g;
 
-int swagger() {
+int swagger( int param ) {
+
+    assert(param != 69);
 
     int i;
     i = 1;
