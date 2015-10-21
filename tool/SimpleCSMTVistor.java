@@ -3,14 +3,16 @@ package tool;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     private final Map<String, Integer> SSAIdsByName = new HashMap<>();
     private String returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
+
+    Deque<String> predicate = new ArrayDeque<>();
+    Set<String> modset = new HashSet<>();
 
     private String getFreshVariable(String variable) {
         Integer id = SSAIdsByName.get(variable);
@@ -64,12 +66,12 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
-        return getDeclarationString(getFreshVariable(visit(ctx.varIdentifier())));
+        return getDeclarationString(getFreshVariable(ctx.ident.getText()));
     }
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return getDeclarationString(getFreshVariable(visit(ctx.varIdentifier())));
+        return getDeclarationString(getFreshVariable(ctx.ident.getText()));
     }
 
     @Override
@@ -78,7 +80,8 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
         String currentVariable = visit(ctx.varref());
         String freshVariable = getFreshVariable(currentVariable);
-
+        modset.add(currentVariable);
+        
         return getDeclarationString(freshVariable) +
                "(assert (= " + freshVariable + " " + expression + "))\n";
     }
@@ -91,6 +94,47 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
         return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
+    }
+
+    @Override
+    public String visitIfStmt(SimpleCParser.IfStmtContext ctx) {
+
+        StringBuilder builder = new StringBuilder();
+
+        String condition = visit(ctx.condition);
+
+        Set<String> currentModset = modset;
+        Set<String> newModset = new HashSet<String>();
+        modset = newModset;
+
+        predicate.push(condition);
+        builder.append(visit(ctx.thenBlock));
+        predicate.pop();
+
+        Map<String, Integer> mapForIfClause = new HashMap<>(SSAIdsByName);
+
+        if( ctx.elseBlock != null ) {
+            predicate.push("(not " + condition + ")");
+            builder.append(visit(ctx.elseBlock));
+            predicate.pop();
+        }
+
+        modset = currentModset;
+
+        for( String var : newModset ) {
+
+            Integer i = mapForIfClause.get(var);
+            if( i == null ) i = 0;
+
+            String ite = "(ite " + condition + " " + var + i + " " + getCurrentVariable(var) + ")";
+
+            // Add fresh variable for var
+            builder.append(getDeclarationString(getFreshVariable(var)));
+
+            builder.append("(assert (= " + getCurrentVariable(var) + " " + ite + "))\n");
+        }
+
+        return builder.toString();
     }
 
     @Override
