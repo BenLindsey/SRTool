@@ -21,22 +21,14 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     private List<String> declarations = new ArrayList<>();
 
-    private void addDeclaration(String variable) {
-        declarations.add("(declare-fun " + variable + " () (_ BitVec 32))\n");
+    public SimpleCSMTVistor(List<SimpleCParser.VarDeclContext> globals) {
+        for (SimpleCParser.VarDeclContext global : globals) {
+            this.globals.add(global.ident.getText());
+        }
     }
 
-    @Override
-    public String visitProgram(SimpleCParser.ProgramContext ctx) {
-        StringBuilder program = new StringBuilder();
-
-        for (SimpleCParser.VarDeclContext global : ctx.globals) {
-            globals.add(global.ident.getText());
-            program.append(visit(global));
-        }
-
-        program.append(super.visitProgram(ctx));
-
-        return program.toString();
+    private void addDeclaration(String variable) {
+        declarations.add("(declare-fun " + variable + " () (_ BitVec 32))\n");
     }
 
     @Override
@@ -262,7 +254,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitOldExpr(SimpleCParser.OldExprContext ctx) {
-        return ssaMap.getCurrentVariable(super.visitOldExpr(ctx));
+        return globalsMapStack.peek().get(super.visitOldExpr(ctx));
     }
 
     @Override
