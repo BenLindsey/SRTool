@@ -7,35 +7,18 @@ import java.util.*;
 
 public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
-    private final Map<String, Integer> SSAIdsByName = new HashMap<>();
     private String returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
+    private SSAMap ssaMap = new SSAMap();
+    
     private ConditionStore conditionStore = new ConditionStore();
     private Set<String> modset = new HashSet<>();
 
-    private String getFreshVariable(String variable) {
-        Integer id = SSAIdsByName.get(variable);
+    private List<String> declarations = new ArrayList<>();
 
-        id = id == null ? 0 : id + 1;
-
-        SSAIdsByName.put(variable, id);
-
-        return variable + id;
-    }
-
-    private String getCurrentVariable(String variable) {
-        Integer id = SSAIdsByName.get(variable);
-
-        return id == null ? getFreshVariable(variable) : variable + id;
-    }
-
-    private String getDeclarationString(String variable) {
-        return "(declare-fun " + variable  + " () (_ BitVec 32))\n";
-    }
-
-    public String visitProgram(SimpleCParser.ProgramContext ctx) {
-        return super.visitProgram(ctx);
+    private void addDeclaration(String variable) {
+        declarations.add("(declare-fun " + variable + " () (_ BitVec 32))\n");
     }
 
     @Override
@@ -46,17 +29,38 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
             statements.append(visit(param));
         }
 
+        // Visit pre conditions
+        for (SimpleCParser.PrepostContext prepost : ctx.contract) {
+            if( prepost.requires() == null ) continue;
+            statements.append(visit(prepost.requires()));
+        }
+
         for(SimpleCParser.StmtContext statement : ctx.stmts) {
             statements.append(visit(statement));
         }
 
+        // Save returnExpr for use in \return annotations
         returnExpr = visit(ctx.returnExpr);
 
+        // Visit post conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
-            statements.append(visitEnsures(prepost.ensures()));
+            if( prepost.ensures() == null ) continue;
+            statements.append(visit(prepost.ensures()));
         }
 
-        return statements.toString();
+        // Add declarations to the top of the output
+        StringBuilder declarationStrings = new StringBuilder();
+
+        for( String dec : declarations ) {
+            declarationStrings.append(dec);
+        }
+
+        return "\n" + declarationStrings.toString() + "\n" + statements.toString();
+    }
+
+    @Override
+    public String visitRequires(SimpleCParser.RequiresContext ctx) {
+        return "(assert (not " + visit(ctx.condition) + "))\n";  // TODO: do what an assume does here!
     }
 
     @Override
@@ -66,12 +70,14 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
-        return getDeclarationString(getFreshVariable(ctx.ident.getText()));
+        addDeclaration(ssaMap.fresh(ctx.ident.getText()));
+        return "";
     }
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return getDeclarationString(getFreshVariable(ctx.ident.getText()));
+        addDeclaration(ssaMap.fresh(ctx.ident.getText()));
+        return "";
     }
 
     @Override
@@ -79,16 +85,17 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         final String expression = visit(ctx.expr());
 
         String currentVariable = visit(ctx.varref());
-        String freshVariable = getFreshVariable(currentVariable);
+        String freshVariable = ssaMap.fresh(currentVariable);
         modset.add(currentVariable);
-        
-        return getDeclarationString(freshVariable) +
-               "(assert (= " + freshVariable + " " + expression + "))\n";
+
+        addDeclaration(freshVariable);
+        return "(assert (= " + freshVariable + " " + expression + "))\n";
     }
 
     @Override
     public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        return getDeclarationString(getFreshVariable(ctx.var.getText()));
+        addDeclaration(ssaMap.fresh(ctx.var.getText()));
+        return "";
     }
 
     @Override
@@ -97,7 +104,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
         if(pred.isEmpty()) return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
 
-        return "(assert (not (=> " + pred + " " + super.visitAssertStmt(ctx) + ")))\n";
+        return "(assert (=> " + pred + " (not " + super.visitAssertStmt(ctx) + ")))\n";
     }
 
     @Override
@@ -124,9 +131,9 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         builder.append(visit(ctx.thenBlock));
         conditionStore.popPredicate();
 
-        Map<String, Integer> mapForIfClause = new HashMap<>(SSAIdsByName);
+        SSAMap mapForIfClause = ssaMap.clone();
 
-        if (ctx.elseBlock != null ) {
+        if (ctx.elseBlock != null) {
             conditionStore.pushPredicate("(not " + predicate + ")");
             builder.append(visit(ctx.elseBlock));
             conditionStore.popPredicate();
@@ -135,16 +142,13 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         modset = currentModset;
 
         for( String var : newModset ) {
-
-            Integer i = mapForIfClause.get(var);
-            if( i == null ) i = 0;
-
-            String ite = "(ite " + predicate + " " + var + i + " " + getCurrentVariable(var) + ")";
+            String ite = "(ite " + condition + " " + mapForIfClause.getCurrentVariable(var) + " " +
+                                                     ssaMap.getCurrentVariable(var) + ")";
 
             // Add fresh variable for var
-            builder.append(getDeclarationString(getFreshVariable(var)));
+            addDeclaration(ssaMap.fresh(var));
 
-            builder.append("(assert (= " + getCurrentVariable(var) + " " + ite + "))\n");
+            builder.append("(assert (= " + ssaMap.getCurrentVariable(var) + " " + ite + "))\n");
         }
 
         return builder.toString();
@@ -207,7 +211,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitVarrefExpr(SimpleCParser.VarrefExprContext ctx) {
-        return getCurrentVariable(super.visitVarrefExpr(ctx));
+        return ssaMap.getCurrentVariable(super.visitVarrefExpr(ctx));
     }
 
     @Override
