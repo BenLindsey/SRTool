@@ -18,11 +18,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private List<String> declarations = new ArrayList<>();
 
     private void addDeclaration(String variable) {
-        declarations.add("(declare-fun " + variable  + " () (_ BitVec 32))\n");
-    }
-
-    public String visitProgram(SimpleCParser.ProgramContext ctx) {
-        return super.visitProgram(ctx);
+        declarations.add("(declare-fun " + variable + " () (_ BitVec 32))\n");
     }
 
     @Override
@@ -33,16 +29,26 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
             statements.append(visit(param));
         }
 
+        // Visit pre conditions
+        for (SimpleCParser.PrepostContext prepost : ctx.contract) {
+            if( prepost.requires() == null ) continue;
+            statements.append(visit(prepost.requires()));
+        }
+
         for(SimpleCParser.StmtContext statement : ctx.stmts) {
             statements.append(visit(statement));
         }
 
+        // Save returnExpr for use in \return annotations
         returnExpr = visit(ctx.returnExpr);
 
+        // Visit post conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
-            statements.append(visitEnsures(prepost.ensures()));
+            if( prepost.ensures() == null ) continue;
+            statements.append(visit(prepost.ensures()));
         }
 
+        // Add declarations to the top of the output
         StringBuilder declarationStrings = new StringBuilder();
 
         for( String dec : declarations ) {
@@ -50,6 +56,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         }
 
         return "\n" + declarationStrings.toString() + "\n" + statements.toString();
+    }
+
+    @Override
+    public String visitRequires(SimpleCParser.RequiresContext ctx) {
+        return "(assert (not " + visit(ctx.condition) + "))\n";  // TODO: do what an assume does here!
     }
 
     @Override
