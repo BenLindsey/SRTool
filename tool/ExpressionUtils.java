@@ -2,6 +2,7 @@ package tool;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
+import parser.SimpleCParser;
 
 import java.util.List;
 
@@ -24,11 +25,12 @@ public class ExpressionUtils {
         final String operator = ops.get(i).getText();
 
         final String asPrefix = String.format("(%s %s %s)",
-                cOperatorToSMT(operator),
+                infixOperatorToPrefix(operator),
                 visitor.visit(args.get(i)),
                 infixToPrefix(ops, args, i + 1)
         );
 
+        // Operator special cases
         switch (operator) {
             case "!=":
                 return "(not " + asPrefix + ")";
@@ -57,7 +59,47 @@ public class ExpressionUtils {
                 );
     }
 
-    public String cOperatorToSMT(String operator) {
+    public String unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg) {
+        return unaryToPrefix(ops, arg, 0);
+    }
+
+    public String unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg, int i) {
+        if (i == ops.size()) {
+            return visitor.visit(arg);
+        }
+
+        final String operator = ops.get(i).getText();
+
+        // Operator special cases
+        switch (operator) {
+            case "+": //treat a no-op. TODO: convert to bv if bool
+                return unaryToPrefix(ops, arg, i + 1);
+
+            default:
+                return String.format("(%s %s)",
+                        unaryOperatorToPrefix(operator),
+                        unaryToPrefix(ops, arg, i + 1)
+                );
+        }
+    }
+
+    private String unaryOperatorToPrefix(String operator) {
+        switch (operator) {
+            case "-":
+                return "bvneg";
+
+            case "!":
+                return "not";  //todo if bv convert to bool
+
+            case "~":
+                return "bvnot";
+
+            default:
+                return operator;
+        }
+    }
+
+    private String infixOperatorToPrefix(String operator) {
         switch (operator) {
             case "==":
                 return "=";
@@ -114,4 +156,5 @@ public class ExpressionUtils {
                 return operator;
         }
     }
+
 }
