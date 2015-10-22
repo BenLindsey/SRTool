@@ -11,6 +11,8 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
     private SSAMap ssaMap = new SSAMap();
+    private List<String> globals = new ArrayList<>();
+    private Deque<Map<String, String>> globalsMapStack = new ArrayDeque<>();
     
     private ConditionStore conditionStore = new ConditionStore();
     private Set<String> modset = new HashSet<>();
@@ -22,8 +24,30 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     }
 
     @Override
+    public String visitProgram(SimpleCParser.ProgramContext ctx) {
+        StringBuilder program = new StringBuilder();
+
+        for (SimpleCParser.VarDeclContext global : ctx.globals) {
+            globals.add(global.ident.getText());
+            program.append(visit(global));
+        }
+
+        program.append(super.visitProgram(ctx));
+
+        return program.toString();
+    }
+
+    @Override
     public String visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
         StringBuilder statements = new StringBuilder();
+
+        // Save globals
+        Map<String, String> globalsMap = new HashMap<>();
+        for (String global : globals) {
+            globalsMap.put(global, ssaMap.getCurrentVariable(global));
+        }
+
+        globalsMapStack.push(globalsMap);
 
         for(SimpleCParser.FormalParamContext param : ctx.formals) {
             statements.append(visit(param));
@@ -54,6 +78,8 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         for( String dec : declarations ) {
             declarationStrings.append(dec);
         }
+
+        globalsMapStack.pop();
 
         return "\n" + declarationStrings.toString() + "\n" + statements.toString();
     }
@@ -208,6 +234,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitResultExpr(SimpleCParser.ResultExprContext ctx) {
         return returnExpr;
+    }
+
+    @Override
+    public String visitOldExpr(SimpleCParser.OldExprContext ctx) {
+        return ssaMap.getCurrentVariable(super.visitOldExpr(ctx));
     }
 
     @Override
