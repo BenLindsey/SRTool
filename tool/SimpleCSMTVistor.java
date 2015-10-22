@@ -142,7 +142,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         modset = currentModset;
 
         for( String var : newModset ) {
-            String ite = "(ite " + condition + " " + mapForIfClause.getCurrentVariable(var) + " " +
+            String ite = "(ite " + predicate + " " + mapForIfClause.getCurrentVariable(var) + " " +
                                                      ssaMap.getCurrentVariable(var) + ")";
 
             // Add fresh variable for var
