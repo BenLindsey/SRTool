@@ -3,16 +3,10 @@
 
 int g;
 
-int swagger( int param ) {
-
-    assert(param != 69);
-
-    int i;
-    i = 1;
+int swagger() {
 
     g = 1;
-    
     assert(g == 1);
     
-    return 0;
+    return g;
 }

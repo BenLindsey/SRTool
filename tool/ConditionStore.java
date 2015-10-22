@@ -4,10 +4,10 @@ import java.util.*;
 
 
 public class ConditionStore {
-    private Deque<String> predicates = new ArrayDeque<>();
-    private List<String> assumptions = new ArrayList<>();
+    private ConditionStack predicates = new ConditionStack();
+    private ConditionStack assumptions = new ConditionStack();
 
-    private String fullPredicate = "";
+    private String fullCondition = "";
     private boolean scratched = false;
 
     public void pushPredicate(String predicate) {
@@ -25,35 +25,26 @@ public class ConditionStore {
 
         if(!predicates.isEmpty()) {
             assumption = String.format("(and %s %s)",
-                    buildCondition(predicates.iterator()),
+                    predicates.getFullCondition(),
                     assumption
             );
         }
 
-        assumptions.add(assumption);
+        assumptions.push(assumption);
     }
 
-    public String getFullPredicate() {
-        if( !scratched ) return fullPredicate;
+    public String getFullCondition() {
+        if( !scratched ) return fullCondition;
 
         scratched = false;
 
-        fullPredicate = predicates.isEmpty() ? buildCondition(assumptions.iterator()) :
-                        assumptions.isEmpty() ? buildCondition(predicates.iterator()) :
+        fullCondition = predicates.isEmpty() ? assumptions.getFullCondition() :
+                        assumptions.isEmpty() ? predicates.getFullCondition() :
                         String.format("(and %s %s)",
-                                buildCondition(predicates.iterator()),
-                                buildCondition(assumptions.iterator())
+                                assumptions.getFullCondition(),
+                                predicates.getFullCondition()
                         );
 
-        return fullPredicate;
-    }
-
-    private String buildCondition( Iterator<String> it) {
-        if( !it.hasNext() ) return "";
-
-        String current = it.next();
-        if( !it.hasNext() ) return current;
-
-        return "(and " + current + " " + buildCondition(it) + ")";
+        return fullCondition;
     }
 }

@@ -14,6 +14,8 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private SSAMap ssaMap = new SSAMap();
     
     private ConditionStore conditionStore = new ConditionStore();
+    private ConditionStack assertions = new ConditionStack();
+
     private Set<String> modset = new HashSet<>();
 
     private List<String> declarations = new ArrayList<>();
@@ -24,20 +26,20 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
-        StringBuilder statements = new StringBuilder();
+        StringBuilder result = new StringBuilder();
 
         for(SimpleCParser.FormalParamContext param : ctx.formals) {
-            statements.append(visit(param));
+            result.append(visit(param));
         }
 
         // Visit pre conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
             if( prepost.requires() == null ) continue;
-            statements.append(visit(prepost.requires()));
+            result.append(visit(prepost.requires()));
         }
 
         for(SimpleCParser.StmtContext statement : ctx.stmts) {
-            statements.append(visit(statement));
+            result.append(visit(statement));
         }
 
         // Save returnExpr for use in \return annotations
@@ -46,8 +48,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         // Visit post conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
             if( prepost.ensures() == null ) continue;
-            statements.append(visit(prepost.ensures()));
+            result.append(visit(prepost.ensures()));
         }
+
+        // Add assertions
+        result.append("(assert (not " + assertions.getFullCondition() + "))\n");
 
         // Add declarations to the top of the output
         StringBuilder declarationStrings = new StringBuilder();
@@ -56,17 +61,20 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
             declarationStrings.append(dec);
         }
 
-        return "\n" + declarationStrings.toString() + "\n" + statements.toString();
+        return "\n" + declarationStrings.toString() + "\n" + result.toString();
     }
 
     @Override
     public String visitRequires(SimpleCParser.RequiresContext ctx) {
-        return "(assert " + visit(ctx.condition) + ")\n";
+        String condition = visit(ctx.condition);
+        conditionStore.pushPredicate(condition);
+        return "(assert " + condition + ")\n";
     }
 
     @Override
     public String visitEnsures(SimpleCParser.EnsuresContext ctx) {
-        return "(assert (not " + visit(ctx.condition) + "))\n";
+        assertions.push(visit(ctx.condition));
+        return "";
     }
 
     @Override
@@ -103,12 +111,17 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        String pred = conditionStore.getFullPredicate();
-        String condition = visit(ctx.condition);
+        String pred = conditionStore.getFullCondition();
 
-        if(pred.isEmpty()) return "(assert (not " + condition + "))\n";
+        String assertion = visit(ctx.condition);
 
-        return "(assert (not (=> " + pred + " " + condition + ")))\n";
+        if( !pred.isEmpty() ) {
+            assertion = "(=> " + pred + " " + assertion + ")";
+        }
+
+        assertions.push(assertion);
+
+        return "";
     }
 
     @Override
@@ -127,27 +140,33 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
         String predicate = visit(ctx.condition);
 
+        SSAMap originalMap = ssaMap;
+        SSAMap mapForIfClause = ssaMap.clone();
+        SSAMap mapForElseClause = ssaMap.clone();
+
         Set<String> currentModset = modset;
         Set<String> newModset = new HashSet<>();
         modset = newModset;
 
+        ssaMap = mapForIfClause;
         conditionStore.pushPredicate(predicate);
         builder.append(visit(ctx.thenBlock));
         conditionStore.popPredicate();
 
-        SSAMap mapForIfClause = ssaMap.clone();
-
         if (ctx.elseBlock != null) {
+            ssaMap = mapForElseClause;
             conditionStore.pushPredicate("(not " + predicate + ")");
             builder.append(visit(ctx.elseBlock));
             conditionStore.popPredicate();
         }
 
+        ssaMap = originalMap;
+
         modset = currentModset;
 
         for( String var : newModset ) {
             String ite = "(ite " + predicate + " " + mapForIfClause.getCurrentVariable(var) + " " +
-                                                     ssaMap.getCurrentVariable(var) + ")";
+                                                     mapForElseClause.getCurrentVariable(var) + ")";
 
             // Add fresh variable for var
             addDeclaration(ssaMap.fresh(var));
