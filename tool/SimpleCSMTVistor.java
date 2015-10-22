@@ -252,7 +252,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitOldExpr(SimpleCParser.OldExprContext ctx) {
-        return SMT.createEmpty(); //todo fix globalsMapStack.peek().get(super.visitOldExpr(ctx));
+        return SMT.createVariable(globalsMapStack.peek().get(ctx.arg.ident.name.getText()));
     }
 
     @Override
