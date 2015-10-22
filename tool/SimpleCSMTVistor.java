@@ -11,7 +11,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private String returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
-    private PredicateStack predicateStack = new PredicateStack();
+    private ConditionStore conditionStore = new ConditionStore();
     private Set<String> modset = new HashSet<>();
 
     private String getFreshVariable(String variable) {
@@ -93,7 +93,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        String pred = predicateStack.getFullPredicate();
+        String pred = conditionStore.getFullPredicate();
 
         if(pred.isEmpty()) return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
 
@@ -101,26 +101,35 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     }
 
     @Override
+    public String visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
+        String assumption = visit(ctx.condition);
+
+        conditionStore.addAssumption(assumption);
+
+        return "";
+    }
+
+    @Override
     public String visitIfStmt(SimpleCParser.IfStmtContext ctx) {
 
         StringBuilder builder = new StringBuilder();
 
-        String condition = visit(ctx.condition);
+        String predicate = visit(ctx.condition);
 
         Set<String> currentModset = modset;
         Set<String> newModset = new HashSet<String>();
         modset = newModset;
 
-        predicateStack.push(condition);
+        conditionStore.pushPredicate(predicate);
         builder.append(visit(ctx.thenBlock));
-        predicateStack.pop();
+        conditionStore.popPredicate();
 
         Map<String, Integer> mapForIfClause = new HashMap<>(SSAIdsByName);
 
         if (ctx.elseBlock != null ) {
-            predicateStack.push("(not " + condition + ")");
+            conditionStore.pushPredicate("(not " + predicate + ")");
             builder.append(visit(ctx.elseBlock));
-            predicateStack.pop();
+            conditionStore.popPredicate();
         }
 
         modset = currentModset;
@@ -130,7 +139,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
             Integer i = mapForIfClause.get(var);
             if( i == null ) i = 0;
 
-            String ite = "(ite " + condition + " " + var + i + " " + getCurrentVariable(var) + ")";
+            String ite = "(ite " + predicate + " " + var + i + " " + getCurrentVariable(var) + ")";
 
             // Add fresh variable for var
             builder.append(getDeclarationString(getFreshVariable(var)));
