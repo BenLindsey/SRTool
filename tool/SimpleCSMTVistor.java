@@ -60,7 +60,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitRequires(SimpleCParser.RequiresContext ctx) {
-        return "(assert (not " + visit(ctx.condition) + "))\n";  // TODO: do what an assume does here!
+        return "(assert " + visit(ctx.condition) + ")\n";
     }
 
     @Override
@@ -101,10 +101,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
         String pred = conditionStore.getFullPredicate();
+        String condition = visit(ctx.condition);
 
-        if(pred.isEmpty()) return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
+        if(pred.isEmpty()) return "(assert (not " + condition + "))\n";
 
-        return "(assert (=> " + pred + " (not " + super.visitAssertStmt(ctx) + ")))\n";
+        return "(assert (not (=> " + pred + " " + condition + ")))\n";
     }
 
     @Override
@@ -124,7 +125,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         String predicate = visit(ctx.condition);
 
         Set<String> currentModset = modset;
-        Set<String> newModset = new HashSet<String>();
+        Set<String> newModset = new HashSet<>();
         modset = newModset;
 
         conditionStore.pushPredicate(predicate);
