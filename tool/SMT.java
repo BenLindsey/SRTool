@@ -2,6 +2,7 @@ package tool;
 
 public class SMT {
     private String expression = "";
+    private boolean isBoolean = false;
 
     public SMT() {}
 
@@ -9,8 +10,26 @@ public class SMT {
         this.expression = expression;
     }
 
+    public SMT(String expression, boolean isBoolean) {
+        this.expression = expression;
+        this.isBoolean = isBoolean;
+    }
+
     public boolean isEmpty() {
         return expression.isEmpty();
+    }
+
+    public SMT asBoolean() {
+        return isBoolean() ? this : new SMT(String.format("(tobool %s)", expression), true);
+    }
+
+    public SMT asBitVector() {
+        return !isBoolean() ? this : new SMT(String.format("(tobv32 %s)", expression), true);
+    }
+
+
+    public boolean isBoolean() {
+        return isBoolean;
     }
 
     @Override
@@ -25,7 +44,7 @@ public class SMT {
     }
 
     public static SMT merge(SMT aggregate, SMT nextResult) {
-        return new SMT(aggregate.toString() + nextResult.toString());
+        return new SMT(aggregate.toString() + nextResult.toString(), aggregate.isBoolean() || nextResult.isBoolean());
     }
 
     public static SMT createNumber(String text) {
@@ -37,19 +56,19 @@ public class SMT {
     }
 
     public static SMT createRequires(SMT condition) {
-        return new SMT("(assert " + condition + ")\n");
+        return new SMT("(assert " + condition.asBoolean() + ")\n");
     }
 
     public static SMT createAnd(SMT left, SMT right) {
-        return new SMT("(and " + left + " " + right + ")\n");
+        return new SMT("(and " + left.asBoolean() + " " + right.asBoolean() + ")\n", true);
     }
 
     public static SMT createAssign(String freshVariable, SMT expression) {
-        return new SMT("(assert (= " + freshVariable + " " + expression + "))\n");
+        return new SMT("(assert (= " + freshVariable + " " + expression.asBitVector() + "))\n");
     }
 
     public static SMT createImplication(SMT pred, SMT assertion) {
-        return new SMT("(=> " + pred + " " + assertion + ")");
+        return new SMT("(=> " + pred.asBoolean() + " " + assertion.asBoolean() + ")", true);
     }
 
 
@@ -58,7 +77,8 @@ public class SMT {
     }
 
     public static SMT createITE(SMT predicate, SMT ifVariable, SMT elseVariable) {
-        return new SMT(String.format("(ite %s %s %s)", predicate, ifVariable, elseVariable));
+        return new SMT(String.format("(ite %s %s %s)", predicate.asBoolean(), ifVariable, elseVariable),
+                ifVariable.isBoolean() || elseVariable.isBoolean());
     }
 
     public static SMT createDeclaration(String variable) {
@@ -70,22 +90,22 @@ public class SMT {
     }
 
     public static SMT createAssertNot(SMT fullCondition) {
-        return new SMT("(assert (not " + fullCondition + "))\n");
+        return new SMT("(assert (not " + fullCondition.asBoolean() + "))\n");
     }
 
     public static SMT createNot(SMT predicate) {
-        return new SMT("(not " + predicate + ")");
+        return new SMT("(not " + predicate + ")", true);
     }
 
-    public static SMT createPrefix(String operator, SMT left, SMT right) {
-        return new SMT(String.format("(%s %s %s)", operator, left, right));
+    public static SMT createPrefix(String operator, SMT left, SMT right, boolean isBoolean) {
+        return new SMT(String.format("(%s %s %s)", operator, left, right), isBoolean);
     }
 
     public static SMT createIsZero(SMT value) {
-        return new SMT(String.format("(= %s (_ bv0 32))", value));
+        return new SMT(String.format("(= %s (_ bv0 32))", value), true);
     }
 
-    public static SMT createUnary(String operator, SMT value) {
-        return new SMT(String.format("(%s %s)", operator, value));
+    public static SMT createUnary(String operator, SMT value, boolean isBoolean) {
+        return new SMT(String.format("(%s %s)", operator, value), isBoolean);
     }
 }

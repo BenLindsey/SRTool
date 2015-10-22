@@ -192,57 +192,57 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitTernExpr(SimpleCParser.TernExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.ternaryToITE(ctx.args) : super.visitTernExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.ternaryToSMT(ctx.args) : super.visitTernExpr(ctx);
     }
 
     @Override
     public SMT visitLorExpr(SimpleCParser.LorExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLorExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitLorExpr(ctx);
     }
 
     @Override
     public SMT visitLandExpr(SimpleCParser.LandExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLandExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitLandExpr(ctx);
     }
 
     @Override
     public SMT visitBorExpr(SimpleCParser.BorExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBorExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitBorExpr(ctx);
     }
 
     @Override
     public SMT visitBandExpr(SimpleCParser.BandExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBandExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitBandExpr(ctx);
     }
 
     @Override
     public SMT visitRelExpr(SimpleCParser.RelExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
     }
 
     @Override
     public SMT visitShiftExpr(SimpleCParser.ShiftExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitShiftExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitShiftExpr(ctx);
     }
 
     @Override
     public SMT visitEqualityExpr(SimpleCParser.EqualityExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitEqualityExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitEqualityExpr(ctx);
     }
 
     @Override
     public SMT visitAddExpr(SimpleCParser.AddExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitAddExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitAddExpr(ctx);
     }
 
     @Override
     public SMT visitMulExpr(SimpleCParser.MulExprContext ctx) {
-        return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitMulExpr(ctx);
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitMulExpr(ctx);
     }
 
     @Override
     public SMT visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
-        return ctx.ops.size() > 0 ? expressionUtils.unaryToPrefix(ctx.ops, ctx.arg) : visit(ctx.atomExpr());
+        return ctx.ops.size() > 0 ? expressionUtils.unaryToSMT(ctx.ops, ctx.arg) : visit(ctx.atomExpr());
     }
     
     @Override

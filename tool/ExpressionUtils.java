@@ -13,57 +13,62 @@ public class ExpressionUtils {
         this.visitor = visitor;
     }
 
-    public SMT infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args) {
-        return infixToPrefix(ops, args, 0);
+    public SMT infixToSMT(List<Token> ops, List<? extends ParserRuleContext> args) {
+        return infixToSMT(ops, args, 0);
     }
 
-    public SMT infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args, int i) {
+    public SMT infixToSMT(List<Token> ops, List<? extends ParserRuleContext> args, int i) {
+        final SMT current = visitor.visit(args.get(i));
+
         if (i == args.size() - 1) {
-            return visitor.visit(args.get(i));
+            return current;
         }
 
         final String operator = ops.get(i).getText();
 
-        final SMT asPrefix = SMT.createPrefix(
+        final SMT next = infixToSMT(ops, args, i + 1);
+
+        final SMT prefix = SMT.createPrefix(
                 infixOperatorToPrefix(operator),
-                visitor.visit(args.get(i)),
-                infixToPrefix(ops, args, i + 1)
+                operatorRequiresBoolean(operator) ? current.asBoolean() : current.asBitVector(),
+                operatorRequiresBoolean(operator) ? next.asBoolean() : next.asBitVector(),
+                operatorCreatesBoolean(operator)
         );
 
         // Operator special cases
         switch (operator) {
             case "!=":
-                return SMT.createNot(asPrefix);
+                return SMT.createNot(prefix.asBoolean());
             case "/":
                 return SMT.createITE(
-                        SMT.createIsZero(infixToPrefix(ops, args, i + 1)),
-                        visitor.visit(args.get(i)),
-                        asPrefix
+                        SMT.createIsZero(next.asBitVector()),
+                        current.asBitVector(),
+                        prefix.asBitVector()
                 );
 
             default:
-                return asPrefix;
+                return prefix;
         }
     }
 
-    public SMT ternaryToITE(List<? extends ParserRuleContext> args) {
-        return ternaryToITE(args, 0);
+    public SMT ternaryToSMT(List<? extends ParserRuleContext> args) {
+        return ternaryToSMT(args, 0);
     }
 
-    public SMT ternaryToITE(List<? extends ParserRuleContext> args, int i) {
+    public SMT ternaryToSMT(List<? extends ParserRuleContext> args, int i) {
         return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
                 SMT.createITE(
                         visitor.visit(args.get(i)),
                         visitor.visit(args.get(i + 1)),
-                        ternaryToITE(args, i + 2)
+                        ternaryToSMT(args, i + 2)
                 );
     }
 
-    public SMT unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg) {
-        return unaryToPrefix(ops, arg, 0);
+    public SMT unaryToSMT(List<Token> ops, SimpleCParser.AtomExprContext arg) {
+        return unaryToSMT(ops, arg, 0);
     }
 
-    public SMT unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg, int i) {
+    public SMT unaryToSMT(List<Token> ops, SimpleCParser.AtomExprContext arg, int i) {
         if (i == ops.size()) {
             return visitor.visit(arg);
         }
@@ -73,13 +78,48 @@ public class ExpressionUtils {
         // Operator special cases
         switch (operator) {
             case "+": //treat a no-op. TODO: convert to bv if bool
-                return unaryToPrefix(ops, arg, i + 1);
+                return unaryToSMT(ops, arg, i + 1);
 
             default:
+                SMT value = unaryToSMT(ops, arg, i + 1);
+
+                if(operatorRequiresBoolean(operator)) {
+                    value = value.asBoolean();
+                }
+
                 return SMT.createUnary(
                         unaryOperatorToPrefix(operator),
-                        unaryToPrefix(ops, arg, i + 1)
+                        value,
+                        operatorCreatesBoolean(operator)
                 );
+        }
+    }
+
+    private boolean operatorCreatesBoolean(String operator) {
+        switch(operator) {
+            case "&&":
+            case "||":
+            case ">":
+            case "<":
+            case ">=":
+            case "<=":
+            case "!=":
+            case "==":
+            case "!":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private boolean operatorRequiresBoolean(String operator) {
+        switch(operator) {
+            case "&&":
+            case "||":
+            case "!":
+                return true;
+            default:
+                return false;
         }
     }
 
