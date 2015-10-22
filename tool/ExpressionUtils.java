@@ -18,12 +18,31 @@ public class ExpressionUtils {
     }
 
     public String infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args, int i) {
-        return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
-                String.format("(%s %s %s)",
-                        cOperatorToSMT(ops.get(i).getText()),         // Add the operator (* or + etc)
-                        visitor.visit(args.get(i)),                   // Handle this expression
-                        infixToPrefix(ops, args, i + 1)               // Recurse for next expression
+        if (i == args.size() - 1) {
+            return visitor.visit(args.get(i));
+        }
+
+        final String operator = ops.get(i).getText();
+
+        final String asPrefix = String.format("(%s %s %s)",
+                cOperatorToSMT(operator),
+                visitor.visit(args.get(i)),
+                infixToPrefix(ops, args, i + 1)
+        );
+
+        switch (operator) {
+            case "!=":
+                return "(not " + asPrefix + ")";
+            case "/":
+                return String.format("(ite (= %s (_ bv0 32)) %s %s)",
+                        infixToPrefix(ops, args, i + 1),
+                        visitor.visit(args.get(i)),
+                        asPrefix
                 );
+
+            default:
+                return asPrefix;
+        }
     }
 
     public String ternaryToITE(List<? extends ParserRuleContext> args) {
@@ -45,7 +64,7 @@ public class ExpressionUtils {
                 return "=";
 
             case "!=":
-                return "!=";    //todo is there a !=?
+                return "=";
 
             case "+":
                 return "bvadd";
@@ -57,7 +76,7 @@ public class ExpressionUtils {
                 return "bvmul";
 
             case "/":
-                return "div";
+                return "bvsdiv";
 
             case "%":
                 return "bvsmod";  //todo should this be signed or unsigned?
