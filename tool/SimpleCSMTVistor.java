@@ -9,6 +9,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     private String returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
+    private boolean nestedExpression = false;
 
     private SSAMap ssaMap = new SSAMap();
     
@@ -82,7 +83,9 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
+        nestedExpression = true;
         final String expression = visit(ctx.expr());
+        nestedExpression = false;
 
         String currentVariable = visit(ctx.varref());
         String freshVariable = ssaMap.fresh(currentVariable);
@@ -125,7 +128,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         String predicate = visit(ctx.condition);
 
         Set<String> currentModset = modset;
-        Set<String> newModset = new HashSet<String>();
+        Set<String> newModset = new HashSet<>();
         modset = newModset;
 
         conditionStore.pushPredicate(predicate);
@@ -153,6 +156,22 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         }
 
         return builder.toString();
+    }
+
+    @Override
+    public String visitExpr(SimpleCParser.ExprContext ctx) {
+        String result = super.visitExpr(ctx);
+        if (nestedExpression) return result;
+
+        if (result.equals("(_ bv0 32)")) {
+            return "false";
+        }
+
+        if (result.matches("\\(_ bv\\d+ 32\\)")) {
+            return "true";
+        }
+
+        return result;
     }
 
     @Override
@@ -203,6 +222,14 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     @Override
     public String visitMulExpr(SimpleCParser.MulExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitMulExpr(ctx);
+    }
+
+    @Override
+    public String visitParenExpr(SimpleCParser.ParenExprContext ctx) {
+        nestedExpression = true;
+        String result = super.visitParenExpr(ctx);
+        nestedExpression = false;
+        return result;
     }
 
     @Override

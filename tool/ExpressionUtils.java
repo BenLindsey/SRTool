@@ -2,7 +2,6 @@ package tool;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
-import parser.SimpleCParser;
 
 import java.util.List;
 
