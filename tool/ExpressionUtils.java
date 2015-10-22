@@ -13,18 +13,18 @@ public class ExpressionUtils {
         this.visitor = visitor;
     }
 
-    public String infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args) {
+    public SMT infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args) {
         return infixToPrefix(ops, args, 0);
     }
 
-    public String infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args, int i) {
+    public SMT infixToPrefix(List<Token> ops, List<? extends ParserRuleContext> args, int i) {
         if (i == args.size() - 1) {
             return visitor.visit(args.get(i));
         }
 
         final String operator = ops.get(i).getText();
 
-        final String asPrefix = String.format("(%s %s %s)",
+        final SMT asPrefix = SMT.createPrefix(
                 infixOperatorToPrefix(operator),
                 visitor.visit(args.get(i)),
                 infixToPrefix(ops, args, i + 1)
@@ -33,10 +33,10 @@ public class ExpressionUtils {
         // Operator special cases
         switch (operator) {
             case "!=":
-                return "(not " + asPrefix + ")";
+                return SMT.createNot(asPrefix);
             case "/":
-                return String.format("(ite (= %s (_ bv0 32)) %s %s)",
-                        infixToPrefix(ops, args, i + 1),
+                return SMT.createITE(
+                        SMT.createIsZero(infixToPrefix(ops, args, i + 1)),
                         visitor.visit(args.get(i)),
                         asPrefix
                 );
@@ -46,24 +46,24 @@ public class ExpressionUtils {
         }
     }
 
-    public String ternaryToITE(List<? extends ParserRuleContext> args) {
+    public SMT ternaryToITE(List<? extends ParserRuleContext> args) {
         return ternaryToITE(args, 0);
     }
 
-    public String ternaryToITE(List<? extends ParserRuleContext> args, int i) {
+    public SMT ternaryToITE(List<? extends ParserRuleContext> args, int i) {
         return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
-                String.format("(ite %s %s %s)",
+                SMT.createITE(
                         visitor.visit(args.get(i)),
                         visitor.visit(args.get(i + 1)),
                         ternaryToITE(args, i + 2)
                 );
     }
 
-    public String unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg) {
+    public SMT unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg) {
         return unaryToPrefix(ops, arg, 0);
     }
 
-    public String unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg, int i) {
+    public SMT unaryToPrefix(List<Token> ops, SimpleCParser.AtomExprContext arg, int i) {
         if (i == ops.size()) {
             return visitor.visit(arg);
         }
@@ -76,7 +76,7 @@ public class ExpressionUtils {
                 return unaryToPrefix(ops, arg, i + 1);
 
             default:
-                return String.format("(%s %s)",
+                return SMT.createUnary(
                         unaryOperatorToPrefix(operator),
                         unaryToPrefix(ops, arg, i + 1)
                 );

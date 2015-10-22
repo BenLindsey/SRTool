@@ -5,9 +5,9 @@ import parser.SimpleCParser;
 
 import java.util.*;
 
-public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
+public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
-    private String returnExpr;
+    private SMT returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
     private SSAMap ssaMap = new SSAMap();
@@ -19,7 +19,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     private Set<String> modset = new HashSet<>();
 
-    private List<String> declarations = new ArrayList<>();
+    private SMT declarations = SMT.createEmpty();
 
     public SimpleCSMTVistor(List<SimpleCParser.VarDeclContext> globals) {
         for (SimpleCParser.VarDeclContext global : globals) {
@@ -28,12 +28,12 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     }
 
     private void addDeclaration(String variable) {
-        declarations.add("(declare-fun " + variable + " () (_ BitVec 32))\n");
+        declarations = SMT.merge(declarations, SMT.createDeclaration(variable));
     }
 
     @Override
-    public String visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
-        StringBuilder result = new StringBuilder();
+    public SMT visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
+        SMT result = SMT.createEmpty();
 
         // Save globals
         Map<String, String> globalsMap = new HashMap<>();
@@ -44,17 +44,17 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         globalsMapStack.push(globalsMap);
 
         for(SimpleCParser.FormalParamContext param : ctx.formals) {
-            result.append(visit(param));
+            result = SMT.merge(result, visit(param));
         }
 
         // Visit pre conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
             if( prepost.requires() == null ) continue;
-            result.append(visit(prepost.requires()));
+            result = SMT.merge(result, (visit(prepost.requires())));
         }
 
         for(SimpleCParser.StmtContext statement : ctx.stmts) {
-            result.append(visit(statement));
+            result = SMT.merge(result, (visit(statement)));
         }
 
         // Save returnExpr for use in \return annotations
@@ -63,97 +63,92 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         // Visit post conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
             if( prepost.ensures() == null ) continue;
-            result.append(visit(prepost.ensures()));
+            result = SMT.merge(result, visit(prepost.ensures()));
         }
 
         // Add assertions
-        result.append("(assert (not " + assertions.getFullCondition() + "))\n");
+        result = SMT.merge(result, SMT.createAssertNot(assertions.getFullCondition()));
 
         // Add declarations to the top of the output
-        StringBuilder declarationStrings = new StringBuilder();
-
-        for( String dec : declarations ) {
-            declarationStrings.append(dec);
-        }
 
         globalsMapStack.pop();
 
-        return "\n" + declarationStrings.toString() + "\n" + result.toString();
+        return SMT.createProcedureDecl(declarations, result);
     }
 
     @Override
-    public String visitRequires(SimpleCParser.RequiresContext ctx) {
-        String condition = visit(ctx.condition);
+    public SMT visitRequires(SimpleCParser.RequiresContext ctx) {
+        SMT condition = visit(ctx.condition);
         conditionStore.pushPredicate(condition);
-        return "(assert " + condition + ")\n";
+        return SMT.createRequires(condition);
     }
 
     @Override
-    public String visitEnsures(SimpleCParser.EnsuresContext ctx) {
+    public SMT visitEnsures(SimpleCParser.EnsuresContext ctx) {
         assertions.push(visit(ctx.condition));
-        return "";
+        return SMT.createEmpty();
     }
 
     @Override
-    public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
+    public SMT visitFormalParam(SimpleCParser.FormalParamContext ctx) {
         addDeclaration(ssaMap.fresh(ctx.ident.getText()));
-        return "";
+        return SMT.createEmpty();
     }
 
     @Override
-    public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
+    public SMT visitVarDecl(SimpleCParser.VarDeclContext ctx) {
         addDeclaration(ssaMap.fresh(ctx.ident.getText()));
-        return "";
+        return SMT.createEmpty();
     }
 
     @Override
-    public String visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
-        final String expression = visit(ctx.expr());
+    public SMT visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
+        final SMT expression = visit(ctx.expr());
 
-        String currentVariable = visit(ctx.varref());
-        String freshVariable = ssaMap.fresh(currentVariable);
-        modset.add(currentVariable);
+        SMT currentVariable = visit(ctx.varref());
+        String freshVariable = ssaMap.fresh(currentVariable.toString());
+        modset.add(currentVariable.toString());
 
         addDeclaration(freshVariable);
-        return "(assert (= " + freshVariable + " " + expression + "))\n";
+        return SMT.createAssign(freshVariable, expression);
     }
 
     @Override
-    public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
+    public SMT visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
         addDeclaration(ssaMap.fresh(ctx.var.getText()));
-        return "";
+        return SMT.createEmpty();
     }
 
     @Override
-    public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        String pred = conditionStore.getFullCondition();
+    public SMT visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
+        SMT pred = conditionStore.getFullCondition();
 
-        String assertion = visit(ctx.condition);
+        SMT assertion = visit(ctx.condition);
 
         if( !pred.isEmpty() ) {
-            assertion = "(=> " + pred + " " + assertion + ")";
+            assertion = SMT.createImplication(pred, assertion);
         }
 
         assertions.push(assertion);
 
-        return "";
+        return SMT.createEmpty();
     }
 
     @Override
-    public String visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
-        String assumption = visit(ctx.condition);
+    public SMT visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
+        SMT assumption = visit(ctx.condition);
 
         conditionStore.addAssumption(assumption);
 
-        return "";
+        return SMT.createEmpty();
     }
 
     @Override
-    public String visitIfStmt(SimpleCParser.IfStmtContext ctx) {
+    public SMT visitIfStmt(SimpleCParser.IfStmtContext ctx) {
 
-        StringBuilder builder = new StringBuilder();
+        SMT builder = SMT.createEmpty();
 
-        String predicate = visit(ctx.condition);
+        SMT predicate = visit(ctx.condition);
 
         SSAMap originalMap = ssaMap;
         SSAMap mapForIfClause = ssaMap.clone();
@@ -165,13 +160,13 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
         ssaMap = mapForIfClause;
         conditionStore.pushPredicate(predicate);
-        builder.append(visit(ctx.thenBlock));
+        builder = SMT.merge(builder, visit(ctx.thenBlock));
         conditionStore.popPredicate();
 
         if (ctx.elseBlock != null) {
             ssaMap = mapForElseClause;
-            conditionStore.pushPredicate("(not " + predicate + ")");
-            builder.append(visit(ctx.elseBlock));
+            conditionStore.pushPredicate(SMT.createNot(predicate));
+            builder = SMT.merge(builder, visit(ctx.elseBlock));
             conditionStore.popPredicate();
         }
 
@@ -180,105 +175,108 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         modset = currentModset;
 
         for( String var : newModset ) {
-            String ite = "(ite " + predicate + " " + mapForIfClause.getCurrentVariable(var) + " " +
-                                                     mapForElseClause.getCurrentVariable(var) + ")";
+            SMT ite = SMT.createITE(
+                    predicate,
+                    SMT.createVariable(mapForIfClause.getCurrentVariable(var)),
+                    SMT.createVariable(mapForElseClause.getCurrentVariable(var))
+            );
 
             // Add fresh variable for var
             addDeclaration(ssaMap.fresh(var));
 
-            builder.append("(assert (= " + ssaMap.getCurrentVariable(var) + " " + ite + "))\n");
+            builder = SMT.merge(builder, SMT.createAssert(ssaMap.getCurrentVariable(var),  ite));
         }
 
-        return builder.toString();
+        return builder;
     }
 
     @Override
-    public String visitTernExpr(SimpleCParser.TernExprContext ctx) {
+    public SMT visitTernExpr(SimpleCParser.TernExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.ternaryToITE(ctx.args) : super.visitTernExpr(ctx);
     }
 
     @Override
-    public String visitLorExpr(SimpleCParser.LorExprContext ctx) {
+    public SMT visitLorExpr(SimpleCParser.LorExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLorExpr(ctx);
     }
 
     @Override
-    public String visitLandExpr(SimpleCParser.LandExprContext ctx) {
+    public SMT visitLandExpr(SimpleCParser.LandExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitLandExpr(ctx);
     }
 
     @Override
-    public String visitBorExpr(SimpleCParser.BorExprContext ctx) {
+    public SMT visitBorExpr(SimpleCParser.BorExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBorExpr(ctx);
     }
 
     @Override
-    public String visitBandExpr(SimpleCParser.BandExprContext ctx) {
+    public SMT visitBandExpr(SimpleCParser.BandExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitBandExpr(ctx);
     }
 
     @Override
-    public String visitRelExpr(SimpleCParser.RelExprContext ctx) {
+    public SMT visitRelExpr(SimpleCParser.RelExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
     }
 
     @Override
-    public String visitShiftExpr(SimpleCParser.ShiftExprContext ctx) {
+    public SMT visitShiftExpr(SimpleCParser.ShiftExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitShiftExpr(ctx);
     }
 
     @Override
-    public String visitEqualityExpr(SimpleCParser.EqualityExprContext ctx) {
+    public SMT visitEqualityExpr(SimpleCParser.EqualityExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitEqualityExpr(ctx);
     }
 
     @Override
-    public String visitAddExpr(SimpleCParser.AddExprContext ctx) {
+    public SMT visitAddExpr(SimpleCParser.AddExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitAddExpr(ctx);
     }
 
     @Override
-    public String visitMulExpr(SimpleCParser.MulExprContext ctx) {
+    public SMT visitMulExpr(SimpleCParser.MulExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToPrefix(ctx.ops, ctx.args) : super.visitMulExpr(ctx);
     }
 
     @Override
-    public String visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
+    public SMT visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
         return ctx.ops.size() > 0 ? expressionUtils.unaryToPrefix(ctx.ops, ctx.arg) : visit(ctx.atomExpr());
     }
     
     @Override
-    public String visitResultExpr(SimpleCParser.ResultExprContext ctx) {
+    public SMT visitResultExpr(SimpleCParser.ResultExprContext ctx) {
         return returnExpr;
     }
 
     @Override
-    public String visitOldExpr(SimpleCParser.OldExprContext ctx) {
-        return globalsMapStack.peek().get(super.visitOldExpr(ctx));
+    public SMT visitOldExpr(SimpleCParser.OldExprContext ctx) {
+        return SMT.createEmpty(); //todo fix globalsMapStack.peek().get(super.visitOldExpr(ctx));
     }
 
     @Override
-    public String visitVarrefExpr(SimpleCParser.VarrefExprContext ctx) {
-        return ssaMap.getCurrentVariable(super.visitVarrefExpr(ctx));
+    public SMT visitVarrefExpr(SimpleCParser.VarrefExprContext ctx) {
+        return SMT.createVariable(ssaMap.getCurrentVariable(super.visitVarrefExpr(ctx).toString()));
     }
 
     @Override
-    public String visitVarIdentifier(SimpleCParser.VarIdentifierContext ctx) {
-        return ctx.name.getText();
+    public SMT visitVarIdentifier(SimpleCParser.VarIdentifierContext ctx) {
+        return SMT.createVariable(ctx.name.getText());
     }
 
     @Override
-    public String visitNumberExpr(SimpleCParser.NumberExprContext ctx) {
-        return "(_ bv" + ctx.number.getText() + " 32)";
+    public SMT visitNumberExpr(SimpleCParser.NumberExprContext ctx) {
+        return SMT.createNumber(ctx.number.getText());
     }
 
     @Override
-    protected String defaultResult() {
-        return "";
+    protected SMT defaultResult() {
+        return SMT.createEmpty();
     }
 
     @Override
-    protected String aggregateResult(String aggregate, String nextResult) {
-        return aggregate + nextResult;
+    protected SMT aggregateResult(SMT aggregate, SMT nextResult) {
+        return SMT.merge(aggregate, nextResult);
     }
 }

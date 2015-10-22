@@ -3,22 +3,22 @@ package tool;
 import java.util.*;
 
 public class ConditionStack {
-    private Deque<String> conditions = new ArrayDeque<>();
+    private Deque<SMT> conditions = new ArrayDeque<>();
 
-    private String fullCondition = "";
+    private SMT fullCondition = SMT.createEmpty();
     private boolean scratched = false;
 
-    public void push(String condition) {
+    public void push(SMT condition) {
         scratched = true;
         conditions.push(condition);
     }
 
-    public String pop() {
+    public SMT pop() {
         scratched = true;
         return conditions.pop();
     }
 
-    public String getFullCondition() {
+    public SMT getFullCondition() {
         if( !scratched ) return fullCondition;
 
         scratched = false;
@@ -27,13 +27,14 @@ public class ConditionStack {
         return fullCondition;
     }
 
-    private String buildCondition( Iterator<String> it) {
-        if( !it.hasNext() ) return "";
+    private SMT buildCondition( Iterator<SMT> it) {
+        if( !it.hasNext() ) return SMT.createEmpty();
 
-        String current = it.next();
+        SMT current = it.next();
         if( !it.hasNext() ) return current;
 
-        return "(and " + current + " " + buildCondition(it) + ")";
+
+        return SMT.createAnd(current, buildCondition(it));
     }
 
     public boolean isEmpty() {
