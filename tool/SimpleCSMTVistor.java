@@ -15,9 +15,10 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private PredicateStack predicateStack = new PredicateStack();
     private Set<String> modset = new HashSet<>();
 
+    private List<String> declarations = new ArrayList<>();
 
-    private String getDeclarationString(String variable) {
-        return "(declare-fun " + variable  + " () (_ BitVec 32))\n";
+    private void addDeclaration(String variable) {
+        declarations.add("(declare-fun " + variable  + " () (_ BitVec 32))\n");
     }
 
     public String visitProgram(SimpleCParser.ProgramContext ctx) {
@@ -42,7 +43,13 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
             statements.append(visitEnsures(prepost.ensures()));
         }
 
-        return statements.toString();
+        StringBuilder declarationStrings = new StringBuilder();
+
+        for( String dec : declarations ) {
+            declarationStrings.append(dec);
+        }
+
+        return "\n" + declarationStrings.toString() + "\n" + statements.toString();
     }
 
     @Override
@@ -52,12 +59,14 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitFormalParam(SimpleCParser.FormalParamContext ctx) {
-        return getDeclarationString(ssaMap.fresh(ctx.ident.getText()));
+        addDeclaration(ssaMap.fresh(ctx.ident.getText()));
+        return "";
     }
 
     @Override
     public String visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return getDeclarationString(ssaMap.fresh(ctx.ident.getText()));
+        addDeclaration(ssaMap.fresh(ctx.ident.getText()));
+        return "";
     }
 
     @Override
@@ -67,14 +76,15 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         String currentVariable = visit(ctx.varref());
         String freshVariable = ssaMap.fresh(currentVariable);
         modset.add(currentVariable);
-        
-        return getDeclarationString(freshVariable) +
-               "(assert (= " + freshVariable + " " + expression + "))\n";
+
+        addDeclaration(freshVariable);
+        return "(assert (= " + freshVariable + " " + expression + "))\n";
     }
 
     @Override
     public String visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        return getDeclarationString(ssaMap.fresh(ctx.var.getText()));
+        addDeclaration(ssaMap.fresh(ctx.var.getText()));
+        return "";
     }
 
     @Override
@@ -116,7 +126,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
                                                      ssaMap.getCurrentVariable(var) + ")";
 
             // Add fresh variable for var
-            builder.append(getDeclarationString(ssaMap.fresh(var)));
+            addDeclaration(ssaMap.fresh(var));
 
             builder.append("(assert (= " + ssaMap.getCurrentVariable(var) + " " + ite + "))\n");
         }
