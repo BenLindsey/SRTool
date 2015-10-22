@@ -11,8 +11,8 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     private String returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
-    Deque<String> predicate = new ArrayDeque<>();
-    Set<String> modset = new HashSet<>();
+    private PredicateStack predicateStack = new PredicateStack();
+    private Set<String> modset = new HashSet<>();
 
     private String getFreshVariable(String variable) {
         Integer id = SSAIdsByName.get(variable);
@@ -93,7 +93,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
 
     @Override
     public String visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
+        String pred = predicateStack.getFullPredicate();
+
+        if(pred.isEmpty()) return "(assert (not " + super.visitAssertStmt(ctx) + "))\n";
+
+        return "(assert (not (=> " + pred + " " + super.visitAssertStmt(ctx) + ")))\n";
     }
 
     @Override
@@ -107,16 +111,16 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
         Set<String> newModset = new HashSet<String>();
         modset = newModset;
 
-        predicate.push(condition);
+        predicateStack.push(condition);
         builder.append(visit(ctx.thenBlock));
-        predicate.pop();
+        predicateStack.pop();
 
         Map<String, Integer> mapForIfClause = new HashMap<>(SSAIdsByName);
 
-        if( ctx.elseBlock != null ) {
-            predicate.push("(not " + condition + ")");
+        if (ctx.elseBlock != null ) {
+            predicateStack.push("(not " + condition + ")");
             builder.append(visit(ctx.elseBlock));
-            predicate.pop();
+            predicateStack.pop();
         }
 
         modset = currentModset;

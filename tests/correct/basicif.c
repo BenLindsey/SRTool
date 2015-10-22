@@ -8,16 +8,16 @@ int swagger() {
     int z;
 
     if(x < 0) {
-        z = 0;
-    } else {
-        if( x < 10 ) {
-            z = 1;
+        assert(x < 0);
+        if( x < -10) {
+            z = 0;
         } else {
-            z = 2;
+            assert( x < 0 && x >= -10);
+            z = 1;
         }
+    } else {
+        z = 2;
     }
-
-    assert(z == 2);
 
     return z;
 }
