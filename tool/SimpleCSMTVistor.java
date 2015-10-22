@@ -206,6 +206,11 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<String> {
     }
 
     @Override
+    public String visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
+        return ctx.ops.size() > 0 ? expressionUtils.unaryToPrefix(ctx.ops, ctx.arg) : visit(ctx.atomExpr());
+    }
+    
+    @Override
     public String visitResultExpr(SimpleCParser.ResultExprContext ctx) {
         return returnExpr;
     }
