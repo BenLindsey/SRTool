@@ -20,7 +20,7 @@ public class VCGenerator {
 		result.append("(define-fun tobv32 ((p Bool)) (_ BitVec 32) (ite p (_ bv1 32) (_ bv0 32)))\n");
 		result.append("(define-fun tobool ((p (_ BitVec 32))) Bool (ite (= p (_ bv0 32)) false true))\n");
 
-		SimpleCSMTVistor visitor = new SimpleCSMTVistor(globals);
+		SimpleCSMTVistor visitor = new SimpleCSMTVistor();
 
 		for( SimpleCParser.VarDeclContext ctx : globals ) {
 			result.append(ctx.accept(visitor));

@@ -3,7 +3,10 @@ package tool;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
@@ -11,37 +14,14 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
     private SSAMap ssaMap = new SSAMap();
-    private List<String> globals = new ArrayList<>();
-    private Deque<Map<String, String>> globalsMapStack = new ArrayDeque<>();
-    
+
     private ConditionStore conditionStore = new ConditionStore();
     private ConditionStack assertions = new ConditionStack();
 
-    private Set<String> modset = new HashSet<>();
-
-    private SMT declarations = SMT.createEmpty();
-
-    public SimpleCSMTVistor(List<SimpleCParser.VarDeclContext> globals) {
-        for (SimpleCParser.VarDeclContext global : globals) {
-            this.globals.add(global.ident.getText());
-        }
-    }
-
-    private void addDeclaration(String variable) {
-        declarations = SMT.merge(declarations, SMT.createDeclaration(variable));
-    }
 
     @Override
     public SMT visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
         SMT result = SMT.createEmpty();
-
-        // Save globals
-        Map<String, String> globalsMap = new HashMap<>();
-        for (String global : globals) {
-            globalsMap.put(global, ssaMap.getCurrentVariable(global));
-        }
-
-        globalsMapStack.push(globalsMap);
 
         for(SimpleCParser.FormalParamContext param : ctx.formals) {
             result = SMT.merge(result, visit(param));
@@ -71,9 +51,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
         // Add declarations to the top of the output
 
-        globalsMapStack.pop();
-
-        return SMT.createProcedureDecl(declarations, result);
+        return SMT.createProcedureDecl(SSAMap.getDeclarations(), result);
     }
 
     @Override
@@ -91,13 +69,13 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitFormalParam(SimpleCParser.FormalParamContext ctx) {
-        addDeclaration(ssaMap.fresh(ctx.ident.getText()));
+        ssaMap.addSMTDeclaration(ctx.ident.getText(), true);
         return SMT.createEmpty();
     }
 
     @Override
     public SMT visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        addDeclaration(ssaMap.fresh(ctx.ident.getText()));
+        ssaMap.addSMTDeclaration(ctx.ident.getText(), true);
         return SMT.createEmpty();
     }
 
@@ -106,16 +84,14 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
         final SMT expression = visit(ctx.expr());
 
         SMT currentVariable = visit(ctx.varref());
-        String freshVariable = ssaMap.fresh(currentVariable.toString());
-        modset.add(currentVariable.toString());
-
-        addDeclaration(freshVariable);
+        String freshVariable = ssaMap.addSMTDeclaration(currentVariable.toString(), false);
+        ssaMap.addModsetVariable(currentVariable.toString());
         return SMT.createAssign(freshVariable, expression);
     }
 
     @Override
     public SMT visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        addDeclaration(ssaMap.fresh(ctx.var.getText()));
+        ssaMap.addSMTDeclaration(ctx.var.getText(), false);
         return SMT.createEmpty();
     }
 
@@ -150,44 +126,43 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
         SMT predicate = visit(ctx.condition);
 
-        SSAMap originalMap = ssaMap;
-        SSAMap mapForIfClause = ssaMap.clone();
-        SSAMap mapForElseClause = ssaMap.clone();
+        SSAMap mapForIfClause;
+        SSAMap mapForElseClause = ssaMap;
 
-        Set<String> currentModset = modset;
-        Set<String> newModset = new HashSet<>();
-        modset = newModset;
-
-        ssaMap = mapForIfClause;
+        ssaMap.pushScope();
         conditionStore.pushPredicate(predicate);
         builder = SMT.merge(builder, visit(ctx.thenBlock));
         conditionStore.popPredicate();
+        mapForIfClause = ssaMap.popScope();
 
         if (ctx.elseBlock != null) {
-            ssaMap = mapForElseClause;
+            ssaMap.pushScope();
             conditionStore.pushPredicate(SMT.createNot(predicate));
             builder = SMT.merge(builder, visit(ctx.elseBlock));
             conditionStore.popPredicate();
+            mapForElseClause = ssaMap.popScope();
         }
 
-        ssaMap = originalMap;
-
-        modset = currentModset;
-
-        for( String var : newModset ) {
+        for( String var : union(mapForIfClause.getModset(), mapForElseClause.getModset())) {
             SMT ite = SMT.createITE(
                     predicate,
-                    SMT.createVariable(mapForIfClause.getCurrentVariable(var)),
-                    SMT.createVariable(mapForElseClause.getCurrentVariable(var))
+                    SMT.createVariable((SSAMap.getActualDeclaredVariables().contains(var) ? ssaMap : mapForIfClause).getCurrentVariable(var)),
+                    SMT.createVariable((SSAMap.getActualDeclaredVariables().contains(var) ? ssaMap : mapForElseClause).getCurrentVariable(var))
             );
 
             // Add fresh variable for var
-            addDeclaration(ssaMap.fresh(var));
+            ssaMap.addSMTDeclaration(var, false);
 
             builder = SMT.merge(builder, SMT.createAssert(ssaMap.getCurrentVariable(var),  ite));
         }
 
         return builder;
+    }
+
+    private <T> Set<T> union(Set<T> first, Set<T> second) {
+        Set<T> union = new HashSet<>(first);
+        union.addAll(second);
+        return union;
     }
 
     @Override
@@ -252,7 +227,7 @@ public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitOldExpr(SimpleCParser.OldExprContext ctx) {
-        return SMT.createVariable(globalsMapStack.peek().get(ctx.arg.ident.name.getText()));
+        return SMT.createVariable(ssaMap.getCurrentVariable(super.visitOldExpr(ctx).toString()));
     }
 
     @Override
