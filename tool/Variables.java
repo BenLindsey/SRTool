@@ -5,8 +5,8 @@ import java.util.*;
 public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
     private static SMT declarations = SMT.createEmpty();
-    private static List<String> SMTDeclaredVariables = new ArrayList<>();
-    private static Set<String> actualDeclaredVariables = new HashSet<>();
+    private List<String> SMTDeclaredVariables = new ArrayList<>();
+    private Set<String> actualDeclaredVariables = new HashSet<>();
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
     private Deque<Set<String>> modset = new ArrayDeque<>();
 
@@ -53,6 +53,9 @@ public class Variables {
             clone.modset.add(newSet);
         }
 
+        clone.SMTDeclaredVariables.addAll(this.SMTDeclaredVariables);
+        clone.actualDeclaredVariables.addAll(this.actualDeclaredVariables);
+
         return clone;
     }
 
@@ -68,12 +71,18 @@ public class Variables {
 
     public Variables popScope() {
         Variables variables = clone();
-        for (String declaredVariable : SMTDeclaredVariables) {
+        Iterator declaredVariableIterator = SMTDeclaredVariables.iterator();
+
+        while (declaredVariableIterator.hasNext()) {
+            String declaredVariable = (String) declaredVariableIterator.next();
             if (idMap.containsKey(declaredVariable) && !idMap.get(declaredVariable).isEmpty()) {
                 idMap.get(declaredVariable).pop();
+                declaredVariableIterator.remove();
             }
         }
+
         modset.pop();
+        actualDeclaredVariables.clear();
         return variables;
     }
 
@@ -102,7 +111,7 @@ public class Variables {
         return modset.peek();
     }
 
-    public static Set<String> getActualDeclaredVariables() {
+    public Set<String> getActualDeclaredVariables() {
         return actualDeclaredVariables;
     }
 }

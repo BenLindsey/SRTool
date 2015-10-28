@@ -144,8 +144,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         for( String var : union(thenBlock.getModset(), elseBlock.getModset())) {
             SMT ite = SMT.createITE(
                     predicate,
-                    SMT.createVariable((Variables.getActualDeclaredVariables().contains(var) ? variables : thenBlock).getCurrentVariable(var)),
-                    SMT.createVariable((Variables.getActualDeclaredVariables().contains(var) ? variables : elseBlock).getCurrentVariable(var))
+                    SMT.createVariable((thenBlock.getActualDeclaredVariables().contains(var) ? variables : thenBlock).getCurrentVariable(var)),
+                    SMT.createVariable((elseBlock.getActualDeclaredVariables().contains(var) ? variables : elseBlock).getCurrentVariable(var))
             );
 
             // Add fresh variable for var
