@@ -3,12 +3,10 @@ package tool;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-public class SimpleCSMTVistor extends SimpleCBaseVisitor<SMT> {
+public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     private SMT returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
