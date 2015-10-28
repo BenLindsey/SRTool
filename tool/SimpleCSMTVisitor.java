@@ -11,7 +11,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private SMT returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
-    private SSAMap ssaMap = new SSAMap();
+    private Variables variables = new Variables();
 
     private ConditionStore conditionStore = new ConditionStore();
     private ConditionStack assertions = new ConditionStack();
@@ -49,7 +49,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         // Add declarations to the top of the output
 
-        return SMT.createProcedureDecl(SSAMap.getDeclarations(), result);
+        return SMT.createProcedureDecl(Variables.getDeclarations(), result);
     }
 
     @Override
@@ -67,13 +67,13 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitFormalParam(SimpleCParser.FormalParamContext ctx) {
-        ssaMap.addSMTDeclaration(ctx.ident.getText(), true);
+        variables.addSMTDeclaration(ctx.ident.getText(), true);
         return SMT.createEmpty();
     }
 
     @Override
     public SMT visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        ssaMap.addSMTDeclaration(ctx.ident.getText(), true);
+        variables.addSMTDeclaration(ctx.ident.getText(), true);
         return SMT.createEmpty();
     }
 
@@ -82,14 +82,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         final SMT expression = visit(ctx.expr());
 
         SMT currentVariable = visit(ctx.varref());
-        String freshVariable = ssaMap.addSMTDeclaration(currentVariable.toString(), false);
-        ssaMap.addModsetVariable(currentVariable.toString());
+        String freshVariable = variables.addSMTDeclaration(currentVariable.toString(), false);
+        variables.addModsetVariable(currentVariable.toString());
         return SMT.createAssign(freshVariable, expression);
     }
 
     @Override
     public SMT visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        ssaMap.addSMTDeclaration(ctx.var.getText(), false);
+        variables.addSMTDeclaration(ctx.var.getText(), false);
         return SMT.createEmpty();
     }
 
@@ -124,34 +124,34 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         SMT predicate = visit(ctx.condition);
 
-        SSAMap mapForIfClause;
-        SSAMap mapForElseClause = ssaMap;
+        Variables thenBlock;
+        Variables elseBlock = variables;
 
-        ssaMap.pushScope();
+        variables.pushScope();
         conditionStore.pushPredicate(predicate);
         builder = SMT.merge(builder, visit(ctx.thenBlock));
         conditionStore.popPredicate();
-        mapForIfClause = ssaMap.popScope();
+        thenBlock = variables.popScope();
 
         if (ctx.elseBlock != null) {
-            ssaMap.pushScope();
+            variables.pushScope();
             conditionStore.pushPredicate(SMT.createNot(predicate));
             builder = SMT.merge(builder, visit(ctx.elseBlock));
             conditionStore.popPredicate();
-            mapForElseClause = ssaMap.popScope();
+            elseBlock = variables.popScope();
         }
 
-        for( String var : union(mapForIfClause.getModset(), mapForElseClause.getModset())) {
+        for( String var : union(thenBlock.getModset(), elseBlock.getModset())) {
             SMT ite = SMT.createITE(
                     predicate,
-                    SMT.createVariable((SSAMap.getActualDeclaredVariables().contains(var) ? ssaMap : mapForIfClause).getCurrentVariable(var)),
-                    SMT.createVariable((SSAMap.getActualDeclaredVariables().contains(var) ? ssaMap : mapForElseClause).getCurrentVariable(var))
+                    SMT.createVariable((Variables.getActualDeclaredVariables().contains(var) ? variables : thenBlock).getCurrentVariable(var)),
+                    SMT.createVariable((Variables.getActualDeclaredVariables().contains(var) ? variables : elseBlock).getCurrentVariable(var))
             );
 
             // Add fresh variable for var
-            ssaMap.addSMTDeclaration(var, false);
+            variables.addSMTDeclaration(var, false);
 
-            builder = SMT.merge(builder, SMT.createAssert(ssaMap.getCurrentVariable(var),  ite));
+            builder = SMT.merge(builder, SMT.createAssert(variables.getCurrentVariable(var),  ite));
         }
 
         return builder;
@@ -225,12 +225,12 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitOldExpr(SimpleCParser.OldExprContext ctx) {
-        return SMT.createVariable(ssaMap.getCurrentVariable(super.visitOldExpr(ctx).toString()));
+        return SMT.createVariable(variables.getCurrentVariable(super.visitOldExpr(ctx).toString()));
     }
 
     @Override
     public SMT visitVarrefExpr(SimpleCParser.VarrefExprContext ctx) {
-        return SMT.createVariable(ssaMap.getCurrentVariable(super.visitVarrefExpr(ctx).toString()));
+        return SMT.createVariable(variables.getCurrentVariable(super.visitVarrefExpr(ctx).toString()));
     }
 
     @Override

@@ -2,7 +2,7 @@ package tool;
 
 import java.util.*;
 
-public class SSAMap  {
+public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
     private static SMT declarations = SMT.createEmpty();
     private static List<String> SMTDeclaredVariables = new ArrayList<>();
@@ -10,7 +10,7 @@ public class SSAMap  {
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
     private Deque<Set<String>> modset = new ArrayDeque<>();
 
-    public SSAMap () {}
+    public Variables() {}
 
     private String fresh(String variable) {
 
@@ -39,8 +39,8 @@ public class SSAMap  {
         return (scope == null || scope.peek() == null) ? addSMTDeclaration(variable, false) : variable + scope.peek();
     }
 
-    public SSAMap clone() {
-        SSAMap clone = new SSAMap();
+    public Variables clone() {
+        Variables clone = new Variables();
 
         for (Map.Entry<String, Deque<Integer>> idEntry : idMap.entrySet()) {
             Deque<Integer> newStack = new ArrayDeque<>();
@@ -66,15 +66,15 @@ public class SSAMap  {
         modset.push(new HashSet<String>());
     }
 
-    public SSAMap popScope() {
-        SSAMap ssaMap = clone();
+    public Variables popScope() {
+        Variables variables = clone();
         for (String declaredVariable : SMTDeclaredVariables) {
             if (idMap.containsKey(declaredVariable) && !idMap.get(declaredVariable).isEmpty()) {
                 idMap.get(declaredVariable).pop();
             }
         }
         modset.pop();
-        return ssaMap;
+        return variables;
     }
 
     public static SMT getDeclarations() {

@@ -7,9 +7,9 @@ import parser.SimpleCParser;
 import java.util.List;
 
 public class ExpressionUtils {
-    private SimpleCSMTVistor visitor;
+    private SimpleCSMTVisitor visitor;
 
-    public ExpressionUtils(SimpleCSMTVistor visitor) {
+    public ExpressionUtils(SimpleCSMTVisitor visitor) {
         this.visitor = visitor;
     }
 
