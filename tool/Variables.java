@@ -5,8 +5,8 @@ import java.util.*;
 public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
     private static SMT declarations = SMT.createEmpty();
-    private List<String> SMTDeclaredVariables = new ArrayList<>();
-    private Set<String> actualDeclaredVariables = new HashSet<>();
+    private Deque<List<String>> SMTDeclaredVariables = new ArrayDeque<>();
+    private Deque<Set<String>> actualDeclaredVariables = new ArrayDeque<>();
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
     private Deque<Set<String>> modset = new ArrayDeque<>();
 
@@ -53,8 +53,15 @@ public class Variables {
             clone.modset.add(newSet);
         }
 
-        clone.SMTDeclaredVariables.addAll(this.SMTDeclaredVariables);
-        clone.actualDeclaredVariables.addAll(this.actualDeclaredVariables);
+        for (List<String> smtDeclaredVariables : SMTDeclaredVariables) {
+            List<String> newList = new ArrayList<>(smtDeclaredVariables);
+            clone.SMTDeclaredVariables.add(newList);
+        }
+
+        for (Set<String> actualDeclaredVariable : actualDeclaredVariables) {
+            Set<String> newSet = new HashSet<>(actualDeclaredVariable);
+            clone.actualDeclaredVariables.add(newSet);
+        }
 
         return clone;
     }
@@ -64,25 +71,28 @@ public class Variables {
     }
 
     public void pushScope() {
-        SMTDeclaredVariables.clear();
-        actualDeclaredVariables.clear();
+        SMTDeclaredVariables.push(new ArrayList<String>());
+        actualDeclaredVariables.push(new HashSet<String>());
         modset.push(new HashSet<String>());
     }
 
     public Variables popScope() {
         Variables variables = clone();
-        Iterator declaredVariableIterator = SMTDeclaredVariables.iterator();
+        Iterator declaredVariableIterator = SMTDeclaredVariables.peek().iterator();
 
         while (declaredVariableIterator.hasNext()) {
             String declaredVariable = (String) declaredVariableIterator.next();
             if (idMap.containsKey(declaredVariable) && !idMap.get(declaredVariable).isEmpty()) {
                 idMap.get(declaredVariable).pop();
-                declaredVariableIterator.remove();
             }
+            declaredVariableIterator.remove();
         }
 
+        List<String> newVars = SMTDeclaredVariables.pop();
+        SMTDeclaredVariables.peek().addAll(newVars);
+
         modset.pop();
-        actualDeclaredVariables.clear();
+        actualDeclaredVariables.pop();
         return variables;
     }
 
@@ -91,8 +101,16 @@ public class Variables {
     }
 
     public String addSMTDeclaration(String variable, boolean isActualDeclaration) {
-        SMTDeclaredVariables.add(variable);
-        if (isActualDeclaration) actualDeclaredVariables.add(variable);
+        if (SMTDeclaredVariables.isEmpty()) {
+            SMTDeclaredVariables.push(new ArrayList<String>());
+        }
+        SMTDeclaredVariables.peek().add(variable);
+        if (isActualDeclaration) {
+            if (actualDeclaredVariables.isEmpty()) {
+                actualDeclaredVariables.push(new HashSet<String>());
+            }
+            actualDeclaredVariables.peek().add(variable);
+        }
 
         String freshVariable = fresh(variable);
 
@@ -112,6 +130,6 @@ public class Variables {
     }
 
     public Set<String> getActualDeclaredVariables() {
-        return actualDeclaredVariables;
+        return actualDeclaredVariables.peek();
     }
 }

@@ -27,7 +27,7 @@ int iffy()
                 x = 2;
             }
 
-            assert (y == 17);
+            assert (y == 5);
         }
 
         assert (x == -1);
