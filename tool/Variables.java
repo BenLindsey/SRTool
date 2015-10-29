@@ -5,10 +5,8 @@ import java.util.*;
 public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
     private static SMT declarations = SMT.createEmpty();
-    private Deque<List<String>> SMTDeclaredVariables = new ArrayDeque<>();
-    private Deque<Set<String>> actualDeclaredVariables = new ArrayDeque<>();
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
-    private Deque<Set<String>> modset = new ArrayDeque<>();
+    private Stack stack = new Stack();
 
     public Variables() {}
 
@@ -48,20 +46,7 @@ public class Variables {
             clone.idMap.put(idEntry.getKey(), newStack);
         }
 
-        for (Set<String> var : modset) {
-            Set<String> newSet = new HashSet<>(var);
-            clone.modset.add(newSet);
-        }
-
-        for (List<String> smtDeclaredVariables : SMTDeclaredVariables) {
-            List<String> newList = new ArrayList<>(smtDeclaredVariables);
-            clone.SMTDeclaredVariables.add(newList);
-        }
-
-        for (Set<String> actualDeclaredVariable : actualDeclaredVariables) {
-            Set<String> newSet = new HashSet<>(actualDeclaredVariable);
-            clone.actualDeclaredVariables.add(newSet);
-        }
+        clone.stack = stack.clone();
 
         return clone;
     }
@@ -71,14 +56,12 @@ public class Variables {
     }
 
     public void pushScope() {
-        SMTDeclaredVariables.push(new ArrayList<String>());
-        actualDeclaredVariables.push(new HashSet<String>());
-        modset.push(new HashSet<String>());
+        stack.push();
     }
 
     public Variables popScope() {
         Variables variables = clone();
-        Iterator declaredVariableIterator = SMTDeclaredVariables.peek().iterator();
+        Iterator declaredVariableIterator = stack.getSMTDeclaredVariables().iterator();
 
         while (declaredVariableIterator.hasNext()) {
             String declaredVariable = (String) declaredVariableIterator.next();
@@ -88,11 +71,8 @@ public class Variables {
             declaredVariableIterator.remove();
         }
 
-        List<String> newVars = SMTDeclaredVariables.pop();
-        SMTDeclaredVariables.peek().addAll(newVars);
+        stack.pop();
 
-        modset.pop();
-        actualDeclaredVariables.pop();
         return variables;
     }
 
@@ -101,15 +81,10 @@ public class Variables {
     }
 
     public String addSMTDeclaration(String variable, boolean isActualDeclaration) {
-        if (SMTDeclaredVariables.isEmpty()) {
-            SMTDeclaredVariables.push(new ArrayList<String>());
-        }
-        SMTDeclaredVariables.peek().add(variable);
+        stack.getSMTDeclaredVariables().add(variable);
+
         if (isActualDeclaration) {
-            if (actualDeclaredVariables.isEmpty()) {
-                actualDeclaredVariables.push(new HashSet<String>());
-            }
-            actualDeclaredVariables.peek().add(variable);
+            stack.getActualDeclaredVariables().add(variable);
         }
 
         String freshVariable = fresh(variable);
@@ -123,13 +98,10 @@ public class Variables {
     }
 
     public Set<String> getModset() {
-        if (modset.isEmpty()) {
-            modset.push(new HashSet<String>());
-        }
-        return modset.peek();
+        return stack.getModset();
     }
 
     public Set<String> getActualDeclaredVariables() {
-        return actualDeclaredVariables.peek();
+        return stack.getActualDeclaredVariables();
     }
 }
