@@ -5,6 +5,7 @@ import java.util.*;
 public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
     private static SMT declarations = SMT.createEmpty();
+    private static Set<String> usedVariables = new HashSet<>();
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
     private Stack stack = new Stack();
 
@@ -19,7 +20,15 @@ public class Variables {
 
         idMap.put(variable, varScope);
 
-        return variable + id;
+        String variableName = variable + id;
+
+        if (usedVariables.contains(variableName)) {
+            return fresh(variable);
+        }
+
+        usedVariables.add(variableName);
+        return variableName;
+
     }
 
     private int getNextId(String var) {
