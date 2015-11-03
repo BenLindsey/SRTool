@@ -19,10 +19,14 @@ public class ConditionStack {
     }
 
     public SMT getFullCondition() {
-        if( !scratched ) return fullCondition;
+        if( scratched ) {
+            scratched = false;
+            fullCondition = buildCondition(conditions.iterator());
+        }
 
-        scratched = false;
-        fullCondition = buildCondition(conditions.iterator());
+        if (fullCondition.isEmpty()) {
+            return SMT.createBool(true);
+        }
 
         return fullCondition;
     }
