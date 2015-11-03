@@ -60,12 +60,19 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     public SMT visitRequires(SimpleCParser.RequiresContext ctx) {
         SMT condition = visit(ctx.condition);
         conditionStore.pushPredicate(condition);
-        return SMT.createRequires(condition);
+        return SMT.createEmpty();
     }
 
     @Override
     public SMT visitEnsures(SimpleCParser.EnsuresContext ctx) {
-        assertions.push(visit(ctx.condition));
+        SMT assertion = visit(ctx.condition);
+
+        SMT pred = conditionStore.getFullCondition();
+        if( !pred.isEmpty() ) {
+            assertion = SMT.createImplication(pred, assertion);
+        }
+
+        assertions.push(assertion);
         return SMT.createEmpty();
     }
 
