@@ -237,7 +237,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitOldExpr(SimpleCParser.OldExprContext ctx) {
-        return SMT.createVariable(variables.getCurrentVariable(super.visitOldExpr(ctx).toString()));
+        return SMT.createVariable(super.visitOldExpr(ctx).toString() + "-0");
     }
 
     @Override

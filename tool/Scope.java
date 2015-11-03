@@ -2,7 +2,7 @@ package tool;
 
 import java.util.*;
 
-public class Stack {
+public class Scope {
     private Deque<List<String>> SMTDeclaredVariables = new ArrayDeque<>();
     private Deque<Set<String>> actualDeclaredVariables = new ArrayDeque<>();
     private Deque<Set<String>> modset = new ArrayDeque<>();
@@ -42,8 +42,8 @@ public class Stack {
         actualDeclaredVariables.pop();
     }
 
-    public Stack clone() {
-        Stack clone = new Stack();
+    public Scope clone() {
+        Scope clone = new Scope();
 
         for (Set<String> var : modset) {
             Set<String> newSet = new HashSet<>(var);
