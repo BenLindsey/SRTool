@@ -6,7 +6,7 @@ public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
     private static SMT declarations = SMT.createEmpty();
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
-    private Stack stack = new Stack();
+    private Scope scope = new Scope();
 
     public Variables() {}
 
@@ -47,7 +47,7 @@ public class Variables {
             clone.idMap.put(idEntry.getKey(), newStack);
         }
 
-        clone.stack = stack.clone();
+        clone.scope = scope.clone();
 
         return clone;
     }
@@ -57,12 +57,12 @@ public class Variables {
     }
 
     public void enterScope() {
-        stack.push();
+        scope.push();
     }
 
     public Variables exitScope() {
         Variables variables = clone();
-        Iterator declaredVariableIterator = stack.getSMTDeclaredVariables().iterator();
+        Iterator declaredVariableIterator = scope.getSMTDeclaredVariables().iterator();
 
         while (declaredVariableIterator.hasNext()) {
             String declaredVariable = (String) declaredVariableIterator.next();
@@ -72,7 +72,7 @@ public class Variables {
             declaredVariableIterator.remove();
         }
 
-        stack.pop();
+        scope.pop();
 
         return variables;
     }
@@ -82,10 +82,10 @@ public class Variables {
     }
 
     public String addSMTDeclaration(String variable, boolean isActualDeclaration) {
-        stack.getSMTDeclaredVariables().add(variable);
+        scope.getSMTDeclaredVariables().add(variable);
 
         if (isActualDeclaration) {
-            stack.getActualDeclaredVariables().add(variable);
+            scope.getActualDeclaredVariables().add(variable);
         }
 
         String freshVariable = fresh(variable);
@@ -99,10 +99,10 @@ public class Variables {
     }
 
     public Set<String> getModset() {
-        return stack.getModset();
+        return scope.getModset();
     }
 
     public Set<String> getActualDeclaredVariables() {
-        return stack.getActualDeclaredVariables();
+        return scope.getActualDeclaredVariables();
     }
 }
