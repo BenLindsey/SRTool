@@ -108,4 +108,8 @@ public class SMT {
     public static SMT createUnary(String operator, SMT value, boolean isBoolean) {
         return new SMT(String.format("(%s %s)", operator, value), isBoolean);
     }
+
+    public static SMT createBool(boolean bool) {
+        return new SMT(Boolean.toString(bool), true);
+    }
 }

@@ -45,7 +45,11 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         }
 
         // Add assertions
-        result = SMT.merge(result, SMT.createAssertNot(assertions.getFullCondition()));
+        SMT assertionsSMT = assertions.getFullCondition();
+
+        if (!assertionsSMT.isEmpty()) {
+            result = SMT.merge(result, SMT.createAssertNot(assertions.getFullCondition()));
+        }
 
         // Add declarations to the top of the output
 
