@@ -7,4 +7,4 @@
 
 DIR=$1
 
-timeout 5 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar tool.SRTool $2
+java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar tool.SRTool $2
