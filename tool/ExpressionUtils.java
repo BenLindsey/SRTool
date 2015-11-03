@@ -85,6 +85,8 @@ public class ExpressionUtils {
 
                 if(operatorRequiresBoolean(operator)) {
                     value = value.asBoolean();
+                } else {
+                    value = value.asBitVector();
                 }
 
                 return SMT.createUnary(
