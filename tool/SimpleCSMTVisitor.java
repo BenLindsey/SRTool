@@ -13,9 +13,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     private Variables variables = new Variables();
 
-    private ConditionStore conditionStore = new ConditionStore();
+    private ImplicationStore implicationStore = new ImplicationStore();
     private ConditionStack assertions = new ConditionStack();
-
 
     @Override
     public SMT visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
@@ -59,7 +58,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     @Override
     public SMT visitRequires(SimpleCParser.RequiresContext ctx) {
         SMT condition = visit(ctx.condition);
-        conditionStore.pushPredicate(condition);
+        implicationStore.pushImplication(condition);
         return SMT.createEmpty();
     }
 
@@ -67,7 +66,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     public SMT visitEnsures(SimpleCParser.EnsuresContext ctx) {
         SMT assertion = visit(ctx.condition);
 
-        SMT pred = conditionStore.getFullCondition();
+        SMT pred = implicationStore.getFullImplication();
         if( !pred.isEmpty() ) {
             assertion = SMT.createImplication(pred, assertion);
         }
@@ -106,7 +105,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
-        SMT pred = conditionStore.getFullCondition();
+        SMT pred = implicationStore.getFullImplication();
 
         SMT assertion = visit(ctx.condition);
 
@@ -123,7 +122,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     public SMT visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
         SMT assumption = visit(ctx.condition);
 
-        conditionStore.addAssumption(assumption);
+        implicationStore.pushImplication(assumption);
 
         return SMT.createEmpty();
     }
@@ -139,16 +138,18 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         Variables elseBlock = variables;
 
         variables.pushScope();
-        conditionStore.pushPredicate(predicate);
+        implicationStore.enterScope();
+        implicationStore.pushImplication(predicate);
         builder = SMT.merge(builder, visit(ctx.thenBlock));
-        conditionStore.popPredicate();
+        implicationStore.exitScope();
         thenBlock = variables.popScope();
 
         if (ctx.elseBlock != null) {
             variables.pushScope();
-            conditionStore.pushPredicate(SMT.createNot(predicate));
+            implicationStore.enterScope();
+            implicationStore.pushImplication(SMT.createNot(predicate));
             builder = SMT.merge(builder, visit(ctx.elseBlock));
-            conditionStore.popPredicate();
+            implicationStore.exitScope();
             elseBlock = variables.popScope();
         }
 
