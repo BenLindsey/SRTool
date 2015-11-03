@@ -5,7 +5,6 @@ import java.util.*;
 public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
     private static SMT declarations = SMT.createEmpty();
-    private static Set<String> usedVariables = new HashSet<>();
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
     private Stack stack = new Stack();
 
@@ -20,14 +19,7 @@ public class Variables {
 
         idMap.put(variable, varScope);
 
-        String variableName = variable + id;
-
-        if (usedVariables.contains(variableName)) {
-            return fresh(variable);
-        }
-
-        usedVariables.add(variableName);
-        return variableName;
+        return variable + "-" + id;
 
     }
 
@@ -43,7 +35,7 @@ public class Variables {
 
     public String getCurrentVariable(String variable) {
         Deque<Integer> scope = idMap.get(variable);
-        return (scope == null || scope.peek() == null) ? addSMTDeclaration(variable, false) : variable + scope.peek();
+        return (scope == null || scope.peek() == null) ? addSMTDeclaration(variable, false) : variable + "-" + scope.peek();
     }
 
     public Variables clone() {
