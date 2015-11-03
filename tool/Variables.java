@@ -56,11 +56,11 @@ public class Variables {
         return idMap.get(variable) == null ? new ArrayDeque<Integer>() : idMap.get(variable);
     }
 
-    public void pushScope() {
+    public void enterScope() {
         stack.push();
     }
 
-    public Variables popScope() {
+    public Variables exitScope() {
         Variables variables = clone();
         Iterator declaredVariableIterator = stack.getSMTDeclaredVariables().iterator();
 
