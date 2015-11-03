@@ -4,13 +4,13 @@ public class SMT {
     private String expression = "";
     private boolean isBoolean = false;
 
-    public SMT() {}
+    private SMT() {}
 
-    public SMT(String expression) {
+    private SMT(String expression) {
         this.expression = expression;
     }
 
-    public SMT(String expression, boolean isBoolean) {
+    private SMT(String expression, boolean isBoolean) {
         this.expression = expression;
         this.isBoolean = isBoolean;
     }
