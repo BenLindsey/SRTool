@@ -1,6 +1,9 @@
 package tool;
 
+import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.TokenSource;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 import parser.SimpleCParser.StmtContext;
@@ -128,6 +131,48 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         implicationStore.pushImplication(assumption);
 
         return SMT.createEmpty();
+    }
+
+    @Override
+    public SMT visitWhileStmt(SimpleCParser.WhileStmtContext ctx) {
+
+        SMT result = SMT.createEmpty();
+
+        SimpleCParser.ExprContext condition = ctx.condition;
+
+        ParserRuleContext dummyNode = new ParserRuleContext();
+
+        for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
+            SimpleCParser.AssertStmtContext assertion =  new SimpleCParser.AssertStmtContext(dummyNode, 0); // TODO: What is the invokingStateNumber??
+            assertion.condition = invariant.invariant().condition;
+            result = SMT.merge(result, visit(assertion));
+        }
+
+        ModSetVisitor modSetVisitor = new ModSetVisitor();
+
+        for( final String var : ctx.body.accept(modSetVisitor) ) {
+            variables.addSMTDeclaration(var, false);
+        }
+
+        for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
+            SimpleCParser.AssumeStmtContext assumption =  new SimpleCParser.AssumeStmtContext(dummyNode, 0);
+            assumption.condition = invariant.invariant().condition;
+            result = SMT.merge(result, visit(assumption));
+        }
+
+        SimpleCParser.IfStmtContext ifBlock = new SimpleCParser.IfStmtContext(dummyNode, 0);
+        ifBlock.condition = condition;
+        ifBlock.thenBlock = ctx.body;
+
+        for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
+            SimpleCParser.AssertStmtContext assertion = new SimpleCParser.AssertStmtContext(ifBlock.thenBlock, 0);
+            assertion.condition = invariant.invariant().condition;
+
+            // Add invariant assertions to end of if block
+            ifBlock.thenBlock.addChild(assertion);
+        }
+
+        return SMT.merge(result, visit(ifBlock));
     }
 
     @Override
