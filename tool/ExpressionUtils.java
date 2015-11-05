@@ -39,6 +39,7 @@ public class ExpressionUtils {
         switch (operator) {
             case "!=":
                 return SMT.createNot(prefix.asBoolean());
+            //case "%": todo is this behaviour defined by default?
             case "/":
                 return SMT.createITE(
                         SMT.createIsZero(next.asBitVector()),
@@ -77,8 +78,8 @@ public class ExpressionUtils {
 
         // Operator special cases
         switch (operator) {
-            case "+": //treat a no-op. TODO: convert to bv if bool
-                return unaryToSMT(ops, arg, i + 1);
+            case "+":
+                return unaryToSMT(ops, arg, i + 1).asBitVector();
 
             default:
                 SMT value = unaryToSMT(ops, arg, i + 1);
@@ -131,7 +132,7 @@ public class ExpressionUtils {
                 return "bvneg";
 
             case "!":
-                return "not";  //todo if bv convert to bool
+                return "not";
 
             case "~":
                 return "bvnot";
