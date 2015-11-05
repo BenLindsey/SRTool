@@ -195,6 +195,9 @@ public class ExpressionUtils {
             case "&":
                 return "bvand";    //todo do these work with bitvectors?
 
+            case "^":
+                return "bvxor";    //todo do these work with bitvectors?
+
             default:
                 return operator;
         }

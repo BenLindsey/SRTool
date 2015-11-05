@@ -201,6 +201,11 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     }
 
     @Override
+    public SMT visitBxorExpr(SimpleCParser.BxorExprContext ctx) {
+        return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitBxorExpr(ctx);
+    }
+
+    @Override
     public SMT visitRelExpr(SimpleCParser.RelExprContext ctx) {
         return ctx.args.size() >= 2 ? expressionUtils.infixToSMT(ctx.ops, ctx.args) : super.visitRelExpr(ctx);
     }
