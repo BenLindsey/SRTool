@@ -24,7 +24,7 @@ public class SMT {
     }
 
     public SMT asBitVector() {
-        return !isBoolean() ? this : new SMT(String.format("(tobv32 %s)", expression), true);
+        return !isBoolean() ? this : new SMT(String.format("(tobv32 %s)", expression), false);
     }
 
 
