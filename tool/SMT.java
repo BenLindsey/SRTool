@@ -55,10 +55,6 @@ public class SMT {
         return new SMT(text);
     }
 
-    public static SMT createRequires(SMT condition) {
-        return new SMT("(assert " + condition.asBoolean() + ")\n");
-    }
-
     public static SMT createAnd(SMT left, SMT right) {
         return new SMT("(and " + left.asBoolean() + " " + right.asBoolean() + ")\n", true);
     }
@@ -94,7 +90,7 @@ public class SMT {
     }
 
     public static SMT createNot(SMT predicate) {
-        return new SMT("(not " + predicate + ")", true);
+        return new SMT("(not " + predicate.asBoolean() + ")", true);
     }
 
     public static SMT createPrefix(String operator, SMT left, SMT right, boolean isBoolean) {
@@ -102,7 +98,7 @@ public class SMT {
     }
 
     public static SMT createIsZero(SMT value) {
-        return new SMT(String.format("(= %s (_ bv0 32))", value), true);
+        return new SMT(String.format("(= %s (_ bv0 32))", value.asBitVector()), true);
     }
 
     public static SMT createUnary(String operator, SMT value, boolean isBoolean) {
