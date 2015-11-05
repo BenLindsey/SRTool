@@ -94,14 +94,6 @@ public class Variables {
         return freshVariable;
     }
 
-    public void addModsetVariable(String variable) {
-        getModset().add(variable);
-    }
-
-    public Set<String> getModset() {
-        return scope.getModset();
-    }
-
     public Set<String> getActualDeclaredVariables() {
         return scope.getActualDeclaredVariables();
     }
