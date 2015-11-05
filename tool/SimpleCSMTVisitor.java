@@ -1,9 +1,13 @@
 package tool;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
+import parser.SimpleCParser.StmtContext;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
@@ -30,7 +34,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             result = SMT.merge(result, (visit(prepost.requires())));
         }
 
-        for(SimpleCParser.StmtContext statement : ctx.stmts) {
+        for(StmtContext statement : ctx.stmts) {
             result = SMT.merge(result, (visit(statement)));
         }
 
@@ -93,7 +97,6 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         SMT currentVariable = visit(ctx.varref());
         String freshVariable = variables.addSMTDeclaration(currentVariable.toString(), false);
-        variables.addModsetVariable(currentVariable.toString());
         return SMT.createAssign(freshVariable, expression);
     }
 
@@ -153,7 +156,9 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             elseBlock = variables.exitScope();
         }
 
-        for( String var : union(thenBlock.getModset(), elseBlock.getModset())) {
+        ModSetVisitor modSetVisitor = new ModSetVisitor();
+
+        for( String var : union(ctx.thenBlock.accept(modSetVisitor),  ctx.elseBlock == null ? new HashSet<String>() : ctx.elseBlock.accept(modSetVisitor))) {
             SMT ite = SMT.createITE(
                     predicate,
                     SMT.createVariable((thenBlock.getActualDeclaredVariables().contains(var) ? variables : thenBlock).getCurrentVariable(var)),
