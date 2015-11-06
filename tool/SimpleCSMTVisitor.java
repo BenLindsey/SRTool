@@ -143,7 +143,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         variables.enterScope();
         implicationStore.enterScope();
         implicationStore.pushImplication(predicate);
-        builder = SMT.merge(builder, super.visitBlockStmt(ctx.thenBlock));
+        builder = SMT.merge(builder, visit(ctx.thenBlock));
         implicationStore.exitScope();
         thenBlock = variables.exitScope();
 
@@ -151,7 +151,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             variables.enterScope();
             implicationStore.enterScope();
             implicationStore.pushImplication(SMT.createNot(predicate));
-            builder = SMT.merge(builder, super.visitBlockStmt(ctx.elseBlock));
+            builder = SMT.merge(builder, visit(ctx.elseBlock));
             implicationStore.exitScope();
             elseBlock = variables.exitScope();
         }
@@ -179,32 +179,6 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         union.addAll(second);
         return union;
     }
-
-    @Override
-    public SMT visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
-        variables.enterScope();
-
-        SMT result = SMT.createEmpty();
-
-        for(StmtContext stmt :ctx.stmts) {
-            result = SMT.merge(result, visit(stmt));
-        }
-
-        Variables vars = variables.exitScope();
-
-        ModSetVisitor modSetVisitor = new ModSetVisitor();
-
-        for( String var : ctx.accept(modSetVisitor)) {
-
-            if( !vars.getActualDeclaredVariables().contains(var) ) {
-                SMT assignment = SMT.createAssign(variables.addSMTDeclaration(var, false), SMT.createVariable(vars.getCurrentVariable(var)));
-                result = SMT.merge(result, assignment);
-            }
-        }
-
-        return result;
-    }
-
 
     @Override
     public SMT visitTernExpr(SimpleCParser.TernExprContext ctx) {
