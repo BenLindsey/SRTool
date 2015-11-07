@@ -44,12 +44,7 @@ public class SMT {
     }
 
     public static SMT merge(SMT aggregate, SMT nextResult) {
-        if(aggregate.isBoolean() || nextResult.isBoolean()) {
-            aggregate = aggregate.asBoolean();
-            nextResult = nextResult.asBoolean();
-        }
-
-        return new SMT(aggregate.toString() + nextResult.toString(), aggregate.isBoolean());
+        return new SMT(aggregate.toString() + nextResult.toString(), aggregate.isBoolean() || nextResult.isBoolean());
     }
 
     public static SMT createNumber(String text) {
