@@ -47,6 +47,13 @@ public class ExpressionUtils {
                         prefix.asBitVector()
                 );
 
+            case ">>":
+                return SMT.createITE(
+                        SMT.createIsOverOrEqual(next.asBitVector(), 32),
+                        SMT.createNumber("0"),
+                        prefix.asBitVector()
+                );
+
             default:
                 return prefix;
         }
