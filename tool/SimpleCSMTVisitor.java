@@ -263,7 +263,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitUnaryExpr(SimpleCParser.UnaryExprContext ctx) {
-        return ctx.ops.size() > 0 ? expressionUtils.unaryToSMT(ctx.ops, ctx.arg) : visit(ctx.atomExpr());
+        return ctx.ops.size() > 0 ? expressionUtils.unaryToSMT(ctx.ops, ctx.arg) : super.visitUnaryExpr(ctx);
     }
     
     @Override
