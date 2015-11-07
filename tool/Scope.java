@@ -27,7 +27,7 @@ public class Scope {
 
     public void pop() {
         List<String> newVars = SMTDeclaredVariables.pop();
-        SMTDeclaredVariables.peek().addAll(newVars);
+        getSMTDeclaredVariables().addAll(newVars);
 
         actualDeclaredVariables.pop();
     }
