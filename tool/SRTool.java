@@ -1,13 +1,7 @@
 package tool;
-import java.io.BufferedWriter;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-
-import com.sun.org.apache.xpath.internal.SourceTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
-
+import org.apache.commons.cli.*;
 import parser.SimpleCLexer;
 import parser.SimpleCParser;
 import parser.SimpleCParser.ProcedureDeclContext;
@@ -15,19 +9,67 @@ import parser.SimpleCParser.ProgramContext;
 import util.ProcessExec;
 import util.ProcessTimeoutException;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+
 public class SRTool {
 
     private static final int TIMEOUT = 30;
 
-	private static boolean verbose = false;
-
 	public static void main(String[] args) throws IOException, InterruptedException {
-        String filename = args[0];
+		CommandLineParser parser = new DefaultParser();
 
-		verbose = args.length > 1 && args[1].equals("-v");
+		Options options = getCommandLineOptions();
 
+		try {
+			CommandLine commandLine = parser.parse(options, args);
+
+			if(commandLine.hasOption("h")) {
+				printHelp();
+			} else {
+				validateFile(commandLine.getOptionValue("f"), commandLine.hasOption("v"));
+			}
+		}
+		catch(ParseException exp) {
+			System.err.println( "Failed to parse command line arguments: " + exp.getMessage());
+
+			printHelp();
+		}
+    }
+
+	private static Options getCommandLineOptions() {
+		Options options = new Options();
+
+		options.addOption(Option.builder("v")
+						.desc("enable verbose logging, by default only CORRECT/INCORRECT is printed.")
+						.build()
+		);
+
+		options.addOption(Option.builder("f")
+						.hasArg()
+						.argName("path to file")
+						.required()
+						.desc("file to validate")
+						.build()
+		);
+
+		options.addOption(Option.builder("h")
+						.longOpt("help")
+						.desc("display usage")
+						.build()
+		);
+
+		return options;
+	}
+
+	private static void printHelp() {
+		HelpFormatter formatter = new HelpFormatter();
+		formatter.printHelp("SRTool", getCommandLineOptions());
+	}
+
+	private static void validateFile(String filename, Boolean verbose) throws IOException, InterruptedException {
 		ANTLRInputStream input = new ANTLRInputStream(new FileInputStream(filename));
-        SimpleCLexer lexer = new SimpleCLexer(input);
+		SimpleCLexer lexer = new SimpleCLexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		SimpleCParser parser = new SimpleCParser(tokens);
 		ProgramContext ctx = parser.program();
@@ -44,9 +86,9 @@ public class SRTool {
 			}
 			System.exit(1);
 		}
-		
+
 		assert ctx.procedures.size() == 1; // For Part 1 of the coursework, this can be assumed
-				
+
 		for(ProcedureDeclContext proc : ctx.procedures) {
 			VCGenerator vcgen = new VCGenerator(proc, ctx.globals);
 			String vc = vcgen.generateVC().toString();
@@ -95,16 +137,15 @@ public class SRTool {
 				System.out.println("INCORRECT");
 				System.exit(0);
 			}
-			
+
 			if (!queryResult.startsWith("unsat")) {
 				System.out.println("UNKNOWN");
 				System.out.println(queryResult);
 				System.exit(1);
 			}
 		}
-		
+
 		System.out.println("CORRECT");
 		System.exit(0);
-		
-    }
+	}
 }
