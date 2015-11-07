@@ -16,6 +16,13 @@ public class ModSetVisitor extends SimpleCBaseVisitor<Set<String>> {
     }
 
     @Override
+    public Set<String> visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
+        Set<String> modset = new HashSet<>();
+        modset.add(ctx.var.getText());
+        return modset;
+    }
+
+    @Override
     protected Set<String> defaultResult() {
         return new HashSet<>();
     }
