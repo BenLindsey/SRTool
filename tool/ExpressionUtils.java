@@ -60,8 +60,8 @@ public class ExpressionUtils {
         return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
                 SMT.createITE(
                         visitor.visit(args.get(i)),
-                        visitor.visit(args.get(i + 1)),
-                        ternaryToSMT(args, i + 2)
+                        visitor.visit(args.get(i + 1)).asBitVector(),
+                        ternaryToSMT(args, i + 2).asBitVector()
                 );
     }
 
