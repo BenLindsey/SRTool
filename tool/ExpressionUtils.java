@@ -170,7 +170,7 @@ public class ExpressionUtils {
                 return "bvsdiv";
 
             case "%":
-                return "bvsrem";  //todo should this be signed or unsigned?
+                return "bvsmod";  //todo should this be signed or unsigned?
 
             case "<<":
                 return "bvshl";
