@@ -26,6 +26,8 @@ public class Scope {
     }
 
     public void pop() {
+        ensureScopeNotEmpty();
+
         List<String> newVars = SMTDeclaredVariables.pop();
         getSMTDeclaredVariables().addAll(newVars);
 
@@ -46,5 +48,10 @@ public class Scope {
         }
 
         return clone;
+    }
+
+    private void ensureScopeNotEmpty() {
+        getSMTDeclaredVariables();
+        getActualDeclaredVariables();
     }
 }

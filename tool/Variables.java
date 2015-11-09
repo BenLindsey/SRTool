@@ -66,7 +66,7 @@ public class Variables {
 
         while (declaredVariableIterator.hasNext()) {
             String declaredVariable = (String) declaredVariableIterator.next();
-            if (idMap.containsKey(declaredVariable) && !idMap.get(declaredVariable).isEmpty()) {
+            if (idMap.get(declaredVariable) != null && !idMap.get(declaredVariable).isEmpty()) {
                 idMap.get(declaredVariable).pop();
             }
             declaredVariableIterator.remove();
