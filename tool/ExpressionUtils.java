@@ -14,24 +14,24 @@ public class ExpressionUtils {
     }
 
     public SMT infixToSMT(List<Token> ops, List<? extends ParserRuleContext> args) {
-        return infixToSMT(ops, args, 0);
+        return infixToSMT(ops, args, args.size() - 1);
     }
 
     public SMT infixToSMT(List<Token> ops, List<? extends ParserRuleContext> args, int i) {
         final SMT current = visitor.visit(args.get(i));
 
-        if (i == args.size() - 1) {
+        if (i == 0) {
             return current;
         }
 
-        final String operator = ops.get(i).getText();
+        final String operator = ops.get(i - 1).getText();
 
-        final SMT next = infixToSMT(ops, args, i + 1);
+        final SMT next = infixToSMT(ops, args, i - 1);
 
         final SMT prefix = SMT.createPrefix(
                 infixOperatorToPrefix(operator),
-                operatorRequiresBoolean(operator) ? current.asBoolean() : current.asBitVector(),
                 operatorRequiresBoolean(operator) ? next.asBoolean() : next.asBitVector(),
+                operatorRequiresBoolean(operator) ? current.asBoolean() : current.asBitVector(),
                 operatorCreatesBoolean(operator)
         );
 
@@ -42,8 +42,15 @@ public class ExpressionUtils {
             //case "%": todo is this behaviour defined by default?
             case "/":
                 return SMT.createITE(
-                        SMT.createIsZero(next.asBitVector()),
-                        current.asBitVector(),
+                        SMT.createIsZero(current.asBitVector()),
+                        next.asBitVector(),
+                        prefix.asBitVector()
+                );
+
+            case ">>":
+                return SMT.createITE(
+                        SMT.createIsOverOrEqual(current.asBitVector(), 32),
+                        SMT.createNumber("0"),
                         prefix.asBitVector()
                 );
 
@@ -60,8 +67,8 @@ public class ExpressionUtils {
         return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
                 SMT.createITE(
                         visitor.visit(args.get(i)),
-                        visitor.visit(args.get(i + 1)),
-                        ternaryToSMT(args, i + 2)
+                        visitor.visit(args.get(i + 1)).asBitVector(),
+                        ternaryToSMT(args, i + 2).asBitVector()
                 );
     }
 

@@ -108,4 +108,8 @@ public class SMT {
     public static SMT createBool(boolean bool) {
         return new SMT(Boolean.toString(bool), true);
     }
+
+    public static SMT createIsOverOrEqual(SMT smt, int i) {
+        return new SMT(String.format("(bvsge %s %s)", smt.asBitVector(), SMT.createNumber(Integer.toString(i))), true);
+    }
 }

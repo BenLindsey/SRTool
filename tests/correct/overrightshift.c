@@ -4,11 +4,7 @@
 int foo(int i, int j)
     requires j >= 32 {
 
-    if(i >= 0) {
-        assert(i >> j == 0);
-    } else {
-        assert(i >> j == -1);
-    }
+    assert(i >> j == 0);
 
     return 0;
 }
