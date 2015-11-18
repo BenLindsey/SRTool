@@ -189,12 +189,13 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         SMT builder = SMT.createEmpty();
 
         SMT predicate = visit(ctx.condition);
+        SMT notPredicate = SMT.createNot(predicate);
 
         Variables thenBlock;
         Variables elseBlock = variables;
 
         variables.enterScope();
-        implicationStore.enterScope();
+        implicationStore.enterScope(predicate);
         implicationStore.pushImplication(predicate);
         builder = SMT.merge(builder, super.visitBlockStmt(ctx.thenBlock));
         implicationStore.exitScope();
@@ -202,8 +203,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         if (ctx.elseBlock != null) {
             variables.enterScope();
-            implicationStore.enterScope();
-            implicationStore.pushImplication(SMT.createNot(predicate));
+            implicationStore.enterScope(notPredicate);
+            implicationStore.pushImplication(notPredicate);
             builder = SMT.merge(builder, super.visitBlockStmt(ctx.elseBlock));
             implicationStore.exitScope();
             elseBlock = variables.exitScope();
