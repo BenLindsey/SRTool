@@ -5,29 +5,28 @@ import java.util.Deque;
 
 public class ImplicationStore {
     private Deque<ConditionStack> implicationsStack = new ArrayDeque<>();
-    private SMT predicate;
+    private Deque<SMT> predicate = new ArrayDeque<>();
 
     public ImplicationStore() {
-        enterScope(null);
+        implicationsStack.push(new ConditionStack());
     }
 
     public void enterScope(SMT predicate) {
-        this.predicate = predicate;
+        this.predicate.push(predicate);
         implicationsStack.push(new ConditionStack());
     }
 
     public void exitScope() {
-        if (predicate != null) {
+        if (!predicate.isEmpty()) {
             ConditionStack predicatedConditions = implicationsStack.pop();
-            implicationsStack.peek().pushConditions(predicatedConditions, predicate);
+            implicationsStack.peek().pushConditions(predicatedConditions, predicate.pop());
         } else {
             implicationsStack.pop();
         }
-        predicate = null;
     }
 
     public void pushImplication(SMT implication) {
-        implication = (predicate != null && implication != predicate) ? SMT.createImplication(predicate, implication) : implication;
+        implication = (!predicate.isEmpty() && implication != predicate.peek()) ? SMT.createImplication(predicate.peek(), implication) : implication;
         implicationsStack.peek().push(implication);
     }
 
