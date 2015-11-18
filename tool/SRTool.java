@@ -118,13 +118,24 @@ public class SRTool {
 					System.exit(1);
 				} catch (IOException e2) {
 
-					// todo: for online tests
-					process = new ProcessExec("z3", "-smt2", "-in");
+					// todo: for new tests
+					process = new ProcessExec("../../../z3", "-smt2", "-in");
+
 					try {
 						queryResult = process.execute(vc, TIMEOUT);
 					} catch (ProcessTimeoutException p) {
 						System.out.println("UNKNOWN");
 						System.exit(1);
+					} catch (IOException e3) {
+
+						// todo: for online tests
+						process = new ProcessExec("z3", "-smt2", "-in");
+						try {
+							queryResult = process.execute(vc, TIMEOUT);
+						} catch (ProcessTimeoutException p) {
+							System.out.println("UNKNOWN");
+							System.exit(1);
+						}
 					}
 				}
 			}

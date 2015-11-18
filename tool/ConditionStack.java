@@ -13,6 +13,15 @@ public class ConditionStack {
         conditions.push(condition);
     }
 
+    public void pushConditions(ConditionStack conditions, SMT predicate) {
+        scratched = true;
+        for (SMT condition : conditions.conditions) {
+            if (condition != predicate) {
+                this.conditions.add(condition);
+            }
+        }
+    }
+
     public SMT pop() {
         scratched = true;
         return conditions.pop();
