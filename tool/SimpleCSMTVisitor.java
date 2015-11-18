@@ -1,19 +1,16 @@
 package tool;
 
-import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.Token;
-import org.antlr.v4.runtime.TokenSource;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 import parser.SimpleCParser.StmtContext;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
+
+    private static final SimpleCParser.ExprContext FALSE_EXPRESSION = new SimpleCParser.ExprContext(null, 0);
 
     private SMT returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
@@ -111,9 +108,13 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitAssertStmt(SimpleCParser.AssertStmtContext ctx) {
+        return assertCondition(ctx.condition);
+    }
+
+    private SMT assertCondition(SimpleCParser.ExprContext condition) {
         SMT pred = implicationStore.getFullImplication();
 
-        SMT assertion = visit(ctx.condition);
+        SMT assertion = visit(condition);
 
         if( !pred.isEmpty() ) {
             assertion = SMT.createImplication(pred, assertion);
@@ -126,11 +127,16 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
-        SMT assumption = visit(ctx.condition);
+        return assumeCondition(ctx.condition);
+    }
+
+    private SMT assumeCondition(SimpleCParser.ExprContext condition) {
+        SMT assumption = condition == FALSE_EXPRESSION ? SMT.createBool(false) : visit(condition);
 
         implicationStore.pushImplication(assumption);
 
         return SMT.createEmpty();
+
     }
 
     @Override
@@ -143,21 +149,18 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         ParserRuleContext dummyNode = new ParserRuleContext();
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
-            SimpleCParser.AssertStmtContext assertion =  new SimpleCParser.AssertStmtContext(dummyNode, 0); // TODO: What is the invokingStateNumber??
-            assertion.condition = invariant.invariant().condition;
-            result = SMT.merge(result, visit(assertion));
+            result = SMT.merge(result, assertCondition(invariant.invariant().condition));
         }
 
         ModSetVisitor modSetVisitor = new ModSetVisitor();
 
+        // Havoc modset variables
         for( final String var : ctx.body.accept(modSetVisitor) ) {
             variables.addSMTDeclaration(var, false);
         }
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
-            SimpleCParser.AssumeStmtContext assumption =  new SimpleCParser.AssumeStmtContext(dummyNode, 0);
-            assumption.condition = invariant.invariant().condition;
-            result = SMT.merge(result, visit(assumption));
+            result = SMT.merge(result, assumeCondition(invariant.invariant().condition));
         }
 
         SimpleCParser.IfStmtContext ifBlock = new SimpleCParser.IfStmtContext(dummyNode, 0);
@@ -171,6 +174,11 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             // Add invariant assertions to end of if block
             ifBlock.thenBlock.addChild(assertion);
         }
+
+        // Assume false to block further loop execution
+        SimpleCParser.AssumeStmtContext assumption = new SimpleCParser.AssumeStmtContext(ifBlock.thenBlock, 0);
+        assumption.condition = FALSE_EXPRESSION;
+        ifBlock.thenBlock.addChild(assumption);
 
         return SMT.merge(result, visit(ifBlock));
     }
@@ -250,6 +258,10 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         return result;
     }
 
+    @Override
+    public SMT visitInvariant(SimpleCParser.InvariantContext ctx) {
+        return assertCondition(ctx.condition);
+    }
 
     @Override
     public SMT visitTernExpr(SimpleCParser.TernExprContext ctx) {
