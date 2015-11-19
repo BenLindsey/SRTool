@@ -3,15 +3,20 @@ import parser.SimpleCParser;
 import parser.SimpleCParser.ProcedureDeclContext;
 
 import java.util.List;
+import java.util.Map;
 
 public class VCGenerator {
 
 	private ProcedureDeclContext proc;
 	private List<SimpleCParser.VarDeclContext> globals;
+	private Map<String, ProcedureSummarisation> summarisationMap;
 	
-	public VCGenerator(ProcedureDeclContext proc, List<SimpleCParser.VarDeclContext> globals) {
+	public VCGenerator(ProcedureDeclContext proc,
+					   List<SimpleCParser.VarDeclContext> globals,
+					   Map<String, ProcedureSummarisation> summarisationMap) {
 		this.proc = proc;
 		this.globals = globals;
+		this.summarisationMap = summarisationMap;
 	}
 	
 	public StringBuilder generateVC() {
@@ -20,7 +25,7 @@ public class VCGenerator {
 		result.append("(define-fun tobv32 ((p Bool)) (_ BitVec 32) (ite p (_ bv1 32) (_ bv0 32)))\n");
 		result.append("(define-fun tobool ((p (_ BitVec 32))) Bool (ite (= p (_ bv0 32)) false true))\n");
 
-		SimpleCSMTVisitor visitor = new SimpleCSMTVisitor();
+		SimpleCSMTVisitor visitor = new SimpleCSMTVisitor(summarisationMap);
 
 		for( SimpleCParser.VarDeclContext ctx : globals ) {
 			result.append(ctx.accept(visitor));
