@@ -17,6 +17,11 @@ public class VCGenerator {
 		this.proc = proc;
 		this.globals = globals;
 		this.summarisationMap = summarisationMap;
+
+		// The static variables in the Variables class mean that we use the
+		// wrong ids/declarations for global variables, so we need to reset these
+		// across procedures.
+		Variables.refresh();
 	}
 	
 	public StringBuilder generateVC() {
