@@ -5,8 +5,7 @@ import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 import parser.SimpleCParser.StmtContext;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
@@ -19,6 +18,13 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     private ImplicationStore implicationStore = new ImplicationStore();
     private ConditionStack assertions = new ConditionStack();
+
+    private Map<String, ProcedureSummarisation> summarisationMap;
+    private Map<String, SMT> parameterMap;
+
+    public SimpleCSMTVisitor(Map<String, ProcedureSummarisation> summarisationMap) {
+        this.summarisationMap = summarisationMap;
+    }
 
     @Override
     public SMT visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
@@ -94,16 +100,69 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     @Override
     public SMT visitAssignStmt(SimpleCParser.AssignStmtContext ctx) {
         final SMT expression = visit(ctx.expr());
+        return assign(ctx.varref(), expression);
+    }
 
-        SMT currentVariable = visit(ctx.varref());
+    private SMT assign(SimpleCParser.VarrefContext ctx, SMT expression) {
+        SMT currentVariable = visit(ctx);
         String freshVariable = variables.addSMTDeclaration(currentVariable.toString(), false);
         return SMT.createAssign(freshVariable, expression);
+
     }
 
     @Override
     public SMT visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        variables.addSMTDeclaration(ctx.var.getText(), false);
+        havoc(ctx.var.getText());
         return SMT.createEmpty();
+    }
+
+    private void havoc(String variable) {
+        variables.addSMTDeclaration(variable, false);
+    }
+
+    private void havoc(Set<String> modset) {
+        for (String var : modset) {
+            havoc(var);
+        }
+    }
+
+    @Override
+    public SMT visitCallStmt(SimpleCParser.CallStmtContext ctx) {
+        ProcedureSummarisation summarisation = summarisationMap.get(ctx.callee.getText());
+
+        // Save current state
+        SMT oldReturnExpr = returnExpr;
+        Map<String,SMT> oldParameterMap = parameterMap;
+
+        parameterMap = new HashMap<>();
+
+        // Caller and callee should have same number of parameters
+        assert ctx.actuals.size() == summarisation.getParameters().size();
+        for (int i = 0; i < ctx.actuals.size(); i++) {
+            SMT actualSMT = visit(ctx.actuals.get(i));
+            parameterMap.put(summarisation.getParameters().get(i), actualSMT);
+        }
+
+        for (SimpleCParser.ExprContext exprContext : summarisation.getPreconditions()) {
+            assertCondition(exprContext);
+        }
+
+        havoc(summarisation.getModset());
+
+        String returnVar = ctx.callee.getText() + "_ret";
+        SMT newReturnExpr = SMT.createVariable(variables.addSMTDeclaration(returnVar, true));
+
+        returnExpr = newReturnExpr;
+
+        for (SimpleCParser.ExprContext exprContext : summarisation.getPostconditions()) {
+            assumeCondition(exprContext);
+        }
+
+        // Restore old state
+        parameterMap = oldParameterMap;
+        returnExpr = oldReturnExpr;
+
+        return assign(ctx.varref(), newReturnExpr);
     }
 
     @Override
@@ -153,11 +212,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         }
 
         ModSetVisitor modSetVisitor = new ModSetVisitor();
-
-        // Havoc modset variables
-        for( final String var : ctx.body.accept(modSetVisitor) ) {
-            variables.addSMTDeclaration(var, false);
-        }
+        havoc(ctx.body.accept(modSetVisitor));
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
             result = SMT.merge(result, assumeCondition(invariant.invariant().condition));
@@ -336,7 +391,12 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitVarrefExpr(SimpleCParser.VarrefExprContext ctx) {
-        return SMT.createVariable(variables.getCurrentVariable(super.visitVarrefExpr(ctx).toString()));
+        String variable = super.visitVarrefExpr(ctx).toString();
+        if (parameterMap != null && parameterMap.containsKey(variable)) {
+            return parameterMap.get(variable);
+        }
+
+        return SMT.createVariable(variables.getCurrentVariable(variable));
     }
 
     @Override

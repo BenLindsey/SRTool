@@ -11,6 +11,7 @@ import util.ProcessTimeoutException;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Map;
 
 public class SRTool {
 
@@ -87,10 +88,13 @@ public class SRTool {
 			System.exit(1);
 		}
 
-		assert ctx.procedures.size() == 1; // For Part 1 of the coursework, this can be assumed
+		ProcedureVisitor procedureVisitor = new ProcedureVisitor();
+		Map<String, ProcedureSummarisation> summarisationMap = ctx.accept(procedureVisitor);
+
+//		assert ctx.procedures.size() == 1; // For Part 1 of the coursework, this can be assumed
 
 		for(ProcedureDeclContext proc : ctx.procedures) {
-			VCGenerator vcgen = new VCGenerator(proc, ctx.globals);
+			VCGenerator vcgen = new VCGenerator(proc, ctx.globals, summarisationMap);
 			String vc = vcgen.generateVC().toString();
 
 			if(verbose) {
