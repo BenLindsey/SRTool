@@ -97,4 +97,9 @@ public class Variables {
     public Set<String> getActualDeclaredVariables() {
         return scope.getActualDeclaredVariables();
     }
+
+    public static void refresh() {
+        nextIds = new HashMap<>();
+        declarations = SMT.createEmpty();
+    }
 }
