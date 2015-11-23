@@ -11,6 +11,9 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     private static final SimpleCParser.ExprContext FALSE_EXPRESSION = new SimpleCParser.ExprContext(null, 0);
 
+    private static final int UNROLLING_DEPTH = 10;
+    private static final boolean UNROLL_LOOPS = true;
+
     private SMT returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
 
@@ -201,6 +204,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     @Override
     public SMT visitWhileStmt(SimpleCParser.WhileStmtContext ctx) {
 
+        if( UNROLL_LOOPS ) return visitWhileStmtUnroll(ctx);
+
         SMT result = SMT.createEmpty();
 
         SimpleCParser.ExprContext condition = ctx.condition;
@@ -236,6 +241,62 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         ifBlock.thenBlock.addChild(assumption);
 
         return SMT.merge(result, visit(ifBlock));
+    }
+
+    private SMT visitWhileStmtUnroll(SimpleCParser.WhileStmtContext ctx) {
+        ParserRuleContext dummyNode = new ParserRuleContext();
+
+        // Add initial invarient assertions
+        SMT result = SMT.createEmpty();
+        for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
+            result = SMT.merge(result, assertCondition(invariant.invariant().condition));
+        }
+
+        SimpleCParser.IfStmtContext ifStmt = new SimpleCParser.IfStmtContext(dummyNode, 0);
+        unrollLoopAsNestedIfs(ifStmt, ctx.condition, ctx.body, ctx.invariantAnnotations, UNROLLING_DEPTH);
+
+        return SMT.merge(result, visit(ifStmt));
+    }
+
+    private void unrollLoopAsNestedIfs(SimpleCParser.IfStmtContext ifStmt,
+                                       SimpleCParser.ExprContext condition,
+                                       SimpleCParser.BlockStmtContext body,
+                                       List<SimpleCParser.LoopInvariantContext> invariantAnnotations,
+                                       int unrollDepth) {
+        ifStmt.condition = condition;
+
+        if( unrollDepth == 0 ) {
+            // Assume false at unroll depth
+
+            SimpleCParser.BlockStmtContext blockStmt = new SimpleCParser.BlockStmtContext(ifStmt, 0);
+
+            SimpleCParser.AssumeStmtContext assumption = new SimpleCParser.AssumeStmtContext(blockStmt, 0);
+            assumption.condition = FALSE_EXPRESSION;
+            blockStmt.addChild(assumption);
+
+            ifStmt.thenBlock = blockStmt;
+            return;
+        }
+
+        // Use a new block stmt so we don't trample over body when adding things
+        SimpleCParser.BlockStmtContext blockStmt = new SimpleCParser.BlockStmtContext(ifStmt, 0);
+        blockStmt.addChild(body);
+
+        for(SimpleCParser.LoopInvariantContext invariant : invariantAnnotations) {
+            SimpleCParser.AssertStmtContext assertion = new SimpleCParser.AssertStmtContext(blockStmt, 0);
+            assertion.condition = invariant.invariant().condition;
+
+            // Add invariant assertions before checking condition again
+            blockStmt.addChild(assertion);
+        }
+
+        SimpleCParser.IfStmtContext innerIfStmt = new SimpleCParser.IfStmtContext(blockStmt, 0);
+        blockStmt.addChild(innerIfStmt);
+
+        ifStmt.thenBlock = blockStmt;
+
+        // Unroll inner if
+        unrollLoopAsNestedIfs(innerIfStmt, condition, body, invariantAnnotations, unrollDepth - 1);
     }
 
     @Override
