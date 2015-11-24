@@ -11,8 +11,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     private static final SimpleCParser.ExprContext FALSE_EXPRESSION = new SimpleCParser.ExprContext(null, 0);
 
-    private static final int UNROLLING_DEPTH = 25;
-    private static final boolean UNROLL_LOOPS = true;
+    private final int UNROLLING_DEPTH;
+    private final boolean UNROLL_LOOPS;
 
     private SMT returnExpr;
     private ExpressionUtils expressionUtils = new ExpressionUtils(this);
@@ -27,6 +27,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     public SimpleCSMTVisitor(Map<String, ProcedureSummarisation> summarisationMap) {
         this.summarisationMap = summarisationMap;
+        UNROLL_LOOPS = false;
+        UNROLLING_DEPTH = 0;
+    }
+
+    public SimpleCSMTVisitor(Map<String, ProcedureSummarisation> summarisationMap, int unrollingDepth) {
+        this.summarisationMap = summarisationMap;
+        UNROLL_LOOPS = true;
+        UNROLLING_DEPTH = unrollingDepth;
     }
 
     @Override
