@@ -11,7 +11,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     private static final SimpleCParser.ExprContext FALSE_EXPRESSION = new SimpleCParser.ExprContext(null, 0);
 
-    private static final int UNROLLING_DEPTH = 10;
+    private static final int UNROLLING_DEPTH = 25;
     private static final boolean UNROLL_LOOPS = true;
 
     private SMT returnExpr;
@@ -280,7 +280,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         // Use a new block stmt so we don't trample over body when adding things
         SimpleCParser.BlockStmtContext blockStmt = new SimpleCParser.BlockStmtContext(ifStmt, 0);
-        blockStmt.addChild(body);
+        for (int i = 0; i < body.getChildCount(); i++) {
+            StmtContext child = body.getChild(StmtContext.class, i);
+
+            // Ignore terminal nodes.
+            if (child != null) {
+                blockStmt.addChild(child);
+            }
+        }
 
         for(SimpleCParser.LoopInvariantContext invariant : invariantAnnotations) {
             SimpleCParser.AssertStmtContext assertion = new SimpleCParser.AssertStmtContext(blockStmt, 0);
