@@ -22,7 +22,8 @@ public class SRTool {
     private static final int TIMEOUT = 30;
 	private static boolean verbose = false;
 
-	private static final int LOOP_UNROLLING_DEPTH = 1000000;
+	private static final int MIN_LOOP_UNROLLING_DEPTH = 1;
+	private static final int MAX_LOOP_UNROLLING_DEPTH = 100;
 
 	public static void main(String[] args) throws IOException, InterruptedException {
 		CommandLineParser parser = new DefaultParser();
@@ -162,8 +163,8 @@ public class SRTool {
 		ProcessExec z3 = findZ3Location(z3Locations);
 
 		if (useLoopUnrolling) {
-			int unwindingDepth = 1;
-			while (unwindingDepth < LOOP_UNROLLING_DEPTH) {
+			int unwindingDepth = MIN_LOOP_UNROLLING_DEPTH;
+			while (unwindingDepth <= MAX_LOOP_UNROLLING_DEPTH) {
 				for (ProcedureDeclContext proc : ctx.procedures) {
 					VCGenerator vcgen = new VCGenerator(proc, ctx.globals, summarisationMap, unwindingDepth);
 					getResult(vcgen, z3);
