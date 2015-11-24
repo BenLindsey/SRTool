@@ -7,4 +7,15 @@
 
 DIR=$1
 
-java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2
+OUTPUT=$(java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 &)
+OUTPUT_LU=$(java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 -lu &)
+wait
+
+if [ "$OUTPUT" == "$OUTPUT_LU" ]; then
+    echo $OUTPUT;
+else
+if [ "$OUTPUT_LU" == "INCORRECT" ]; then
+    echo $OUTPUT_LU;
+else
+    echo "UNKNOWN";
+fi
