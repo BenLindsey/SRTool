@@ -159,6 +159,7 @@ public class SRTool {
 		z3Locations.add("./z3");
 		z3Locations.add("../../z3");
 		z3Locations.add("../../../z3");
+		z3Locations.add("../../../../z3");
 
 		ProcessExec z3 = findZ3Location(z3Locations);
 
