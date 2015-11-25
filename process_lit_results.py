@@ -30,7 +30,7 @@ def resultIsUnknown(result):
 
 def resultIsWrong(result):
   path = result.split(' ')[3]
-  natureOfResult = path.split('/')[2]
+  natureOfResult = path.split('/')[3]
   if natureOfResult == "correct":
       return resultExactlyMatches(result, "INCORRECT")
   assert natureOfResult == "incorrect"
@@ -38,8 +38,8 @@ def resultIsWrong(result):
 
 def checkTestResults():
 
-    part1TestNames = glob.glob("__acceptancetests/part1/*/*.c")
-    part2TestNames = glob.glob("__acceptancetests/part2/*/*.c")
+    part1TestNames = glob.glob("tests/__acceptancetests/part1/*/*.c")
+    part2TestNames = glob.glob("tests/__acceptancetests/part2/*/*.c")
 
     part1NumTests = len(part1TestNames)
     part2NumTests = len(part2TestNames)
