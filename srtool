@@ -13,8 +13,7 @@ wait
 
 if [ "$OUTPUT" == "$OUTPUT_LU" ]; then
     echo $OUTPUT;
-else
-if [ "$OUTPUT_LU" == "INCORRECT" ]; then
+elif [ "$OUTPUT_LU" == "INCORRECT" ]; then
     echo $OUTPUT_LU;
 else
     echo "UNKNOWN";
