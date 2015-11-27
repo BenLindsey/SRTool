@@ -37,7 +37,13 @@ public class SRTool {
 				printHelp();
 			} else {
 				verbose = commandLine.hasOption("v");
-				validateFile(commandLine.getOptionValue("f"), commandLine.hasOption("lu"));
+				try {
+					validateFile(commandLine.getOptionValue("f"), commandLine.hasOption("lu"));
+				} catch (Exception e) {
+					if (verbose) e.printStackTrace();
+					System.out.println("UNKNOWN");
+					System.exit(1);
+				}
 			}
 		}
 		catch(ParseException exp) {
@@ -106,7 +112,7 @@ public class SRTool {
 		String queryResult = "";
 		try {
 			queryResult = z3.execute(vc, TIMEOUT);
-		} catch (ProcessTimeoutException | IOException | NullPointerException e) {
+		} catch (ProcessTimeoutException | IOException e) {
 			if (verbose) e.printStackTrace();
 			System.out.println("UNKNOWN");
 			System.exit(1);
@@ -123,7 +129,7 @@ public class SRTool {
 
 		if (!queryResult.startsWith("unsat")) {
 			System.out.println("UNKNOWN");
-			System.out.println(queryResult);
+			System.err.println(queryResult);
 			System.exit(1);
 		}
 
