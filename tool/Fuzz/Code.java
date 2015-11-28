@@ -9,4 +9,6 @@ public interface Code {
     boolean hasMainFunction();
 
     Code ensureMainFunction();
+
+    boolean isEmpty();
 }
