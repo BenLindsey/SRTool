@@ -14,6 +14,8 @@ public class VCGenerator {
 	private final int UNROLLING_DEPTH;
 	private final boolean UNROLL_LOOPS;
 
+	private List<Integer> unwindingAssertionIds;
+
 	
 	public VCGenerator(ProcedureDeclContext proc,
 					   List<SimpleCParser.VarDeclContext> globals,
@@ -70,7 +72,20 @@ public class VCGenerator {
 
 		result.append("\n(check-sat)\n");
 		result.append("(get-model)\n");
+		result.append("(get-value (");
+
+		for(int i = 0; i < visitor.assertionsSize(); i++) {
+			result.append(" ").append(AssertionCollection.getAssertionName(i));
+		}
+
+		result.append("))\n");
+
+		unwindingAssertionIds = visitor.getUnwindingAssertionIds();
 
 		return result;
+	}
+
+	public List<Integer> getUnwindingAssertionIds() {
+		return unwindingAssertionIds;
 	}
 }

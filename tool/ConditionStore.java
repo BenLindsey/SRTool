@@ -5,29 +5,24 @@ import tool.SMTs.SMTFactory;
 
 import java.util.*;
 
-public class ConditionStack {
-    private Deque<SMT> conditions = new ArrayDeque<>();
+public class ConditionStore {
+    private List<SMT> conditions = new ArrayList<>();
 
     private SMT fullCondition = SMTFactory.createEmpty();
     private boolean scratched = false;
 
     public void push(SMT condition) {
         scratched = true;
-        conditions.push(condition);
+        conditions.add(condition);
     }
 
-    public void pushConditions(ConditionStack conditions, SMT predicate) {
+    public void pushConditions(ConditionStore conditions, SMT predicate) {
         scratched = true;
         for (SMT condition : conditions.conditions) {
             if (condition != predicate) {
                 this.conditions.add(condition);
             }
         }
-    }
-
-    public SMT pop() {
-        scratched = true;
-        return conditions.pop();
     }
 
     public SMT getFullCondition() {
@@ -55,5 +50,13 @@ public class ConditionStack {
 
     public boolean isEmpty() {
         return conditions.isEmpty();
+    }
+
+    public int size() {
+        return conditions.size();
+    }
+
+    public SMT get(int i) {
+        return conditions.get(i);
     }
 }

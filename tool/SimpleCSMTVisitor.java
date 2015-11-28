@@ -22,10 +22,12 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private Variables variables = new Variables();
 
     private ImplicationStore implicationStore = new ImplicationStore();
-    private ConditionStack assertions = new ConditionStack();
+    private AssertionCollection assertions = new AssertionCollection();
 
     private Map<String, ProcedureSummarisation> summarisationMap;
     private Map<String, SMT> parameterMap;
+
+    private List<Integer> unwindingAssertionIds = new ArrayList<>();
 
     public SimpleCSMTVisitor(Map<String, ProcedureSummarisation> summarisationMap) {
         this.summarisationMap = summarisationMap;
@@ -37,6 +39,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         this.summarisationMap = summarisationMap;
         UNROLL_LOOPS = true;
         UNROLLING_DEPTH = unrollingDepth;
+    }
+
+    public List<Integer> getUnwindingAssertionIds() {
+        return unwindingAssertionIds;
+    }
+
+    public int assertionsSize() {
+        return assertions.size();
     }
 
     @Override
@@ -66,16 +76,20 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             result = SMTFactory.merge(result, visit(prepost.ensures()));
         }
 
+        // Add assignments
+        result = SMTFactory.merge(result, assertions.getAssignments());
+
         // Add assertions
-        SMT assertionsSMT = assertions.getFullCondition();
+        SMT assertionsSMT = assertions.getAssertions();
 
         if (!assertionsSMT.isEmpty()) {
-            result = SMTFactory.merge(result, SMTFactory.createAssertNot(assertions.getFullCondition()));
+            result = SMTFactory.merge(result, SMTFactory.createAssertNot(assertionsSMT));
         }
 
         // Add declarations to the top of the output
-
-        return SMTFactory.createProcedureDecl(Variables.getDeclarations(), result);
+        SMT declarations = assertions.addAssertionDeclarations();
+        declarations = SMTFactory.merge(declarations, Variables.getDeclarations());
+        return SMTFactory.createProcedureDecl(declarations, result);
     }
 
     @Override
@@ -119,7 +133,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private SMT assign(SimpleCParser.VarrefContext ctx, SMT expression) {
         SMT currentVariable = visit(ctx);
         String freshVariable = variables.addSMTDeclaration(currentVariable.toString(), false);
-        return SMTFactory.createAssign(freshVariable, expression);
+        return SMTFactory.createBitVectorAssign(freshVariable, expression);
 
     }
 
@@ -186,13 +200,17 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private SMT assertCondition(SimpleCParser.ExprContext condition) {
         SMT pred = implicationStore.getFullImplication();
 
-        SMT assertion = visit(condition);
+        SMT assertion = (condition == FALSE_EXPRESSION) ? SMTFactory.createBool(false) : visit(condition);
 
         if( !pred.isEmpty() ) {
             assertion = SMTFactory.createImplication(pred, assertion);
         }
 
-        assertions.push(assertion);
+        int assertionId = assertions.push(assertion);
+
+        if( condition == FALSE_EXPRESSION ) {
+            unwindingAssertionIds.add(assertionId);
+        }
 
         return SMTFactory.createEmpty();
     }
@@ -277,9 +295,13 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         ifStmt.condition = condition;
 
         if( unrollDepth == 0 ) {
-            // Assume false at unroll depth
+            // Assert and assume false at unroll depth
 
             SimpleCParser.BlockStmtContext blockStmt = new SimpleCParser.BlockStmtContext(ifStmt, 0);
+
+            SimpleCParser.AssertStmtContext assertion = new SimpleCParser.AssertStmtContext(blockStmt, 0);
+            assertion.condition = FALSE_EXPRESSION;
+            blockStmt.addChild(assertion);
 
             SimpleCParser.AssumeStmtContext assumption = new SimpleCParser.AssumeStmtContext(blockStmt, 0);
             assumption.condition = FALSE_EXPRESSION;
@@ -387,7 +409,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         for( String var : ctx.accept(modSetVisitor)) {
 
             if( !vars.getActualDeclaredVariables().contains(var) ) {
-                SMT assignment = SMTFactory.createAssign(variables.addSMTDeclaration(var, false), SMTFactory.createVariable(vars.getCurrentVariable(var)));
+                SMT assignment = SMTFactory.createBitVectorAssign(variables.addSMTDeclaration(var, false), SMTFactory.createVariable(vars.getCurrentVariable(var)));
                 result = SMTFactory.merge(result, assignment);
             }
         }
