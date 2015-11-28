@@ -1,5 +1,8 @@
 package tool;
 
+import tool.SMTs.SMTFactory;
+import tool.SMTs.SMT;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -26,21 +29,20 @@ public class ImplicationStore {
     }
 
     public void pushImplication(SMT implication) {
-        implication = (!predicate.isEmpty() && implication != predicate.peek()) ? SMT.createImplication(predicate.peek(), implication) : implication;
+        implication = (!predicate.isEmpty() && implication != predicate.peek()) ? SMTFactory.createImplication(predicate.peek(), implication) : implication;
         implicationsStack.peek().push(implication);
     }
 
     public SMT getFullImplication() {
-        SMT result = SMT.createEmpty();
+        SMT result = SMTFactory.createEmpty();
 
         for (ConditionStack conditions : implicationsStack) {
             if (result.isEmpty()) {
                 result = conditions.getFullCondition();
             } else {
-                result = SMT.createAnd(result, conditions.getFullCondition());
+                result = SMTFactory.createAnd(result, conditions.getFullCondition());
             }
         }
-
         return result;
     }
 }

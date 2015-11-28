@@ -3,6 +3,8 @@ package tool;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import parser.SimpleCParser;
+import tool.SMTs.SMT;
+import tool.SMTs.SMTFactory;
 
 import java.util.List;
 
@@ -28,7 +30,7 @@ public class ExpressionUtils {
 
         final SMT next = infixToSMT(ops, args, i - 1);
 
-        final SMT prefix = SMT.createPrefix(
+        final SMT prefix = SMTFactory.createPrefix(
                 infixOperatorToPrefix(operator),
                 operatorRequiresBoolean(operator) ? next.asBoolean() : next.asBitVector(),
                 operatorRequiresBoolean(operator) ? current.asBoolean() : current.asBitVector(),
@@ -38,19 +40,19 @@ public class ExpressionUtils {
         // Operator special cases
         switch (operator) {
             case "!=":
-                return SMT.createNot(prefix.asBoolean());
+                return SMTFactory.createNot(prefix.asBoolean());
             //case "%": todo is this behaviour defined by default?
             case "/":
-                return SMT.createITE(
-                        SMT.createIsZero(current.asBitVector()),
+                return SMTFactory.createITE(
+                        SMTFactory.createIsZero(current.asBitVector()),
                         next.asBitVector(),
                         prefix.asBitVector()
                 );
 
             case ">>":
-                return SMT.createITE(
-                        SMT.createIsOverOrEqual(current.asBitVector(), 32),
-                        SMT.createNumber("0"),
+                return SMTFactory.createITE(
+                        SMTFactory.createIsOverOrEqual(current.asBitVector(), 32),
+                        SMTFactory.createNumber("0"),
                         prefix.asBitVector()
                 );
 
@@ -65,7 +67,7 @@ public class ExpressionUtils {
 
     public SMT ternaryToSMT(List<? extends ParserRuleContext> args, int i) {
         return (i == args.size() - 1) ? visitor.visit(args.get(i)) :  // Recursive base case
-                SMT.createITE(
+                SMTFactory.createITE(
                         visitor.visit(args.get(i)),
                         visitor.visit(args.get(i + 1)).asBitVector(),
                         ternaryToSMT(args, i + 2).asBitVector()
@@ -97,7 +99,7 @@ public class ExpressionUtils {
                     value = value.asBitVector();
                 }
 
-                return SMT.createUnary(
+                return SMTFactory.createUnary(
                         unaryOperatorToPrefix(operator),
                         value,
                         operatorCreatesBoolean(operator)

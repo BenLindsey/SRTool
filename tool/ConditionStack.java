@@ -1,11 +1,14 @@
 package tool;
 
+import tool.SMTs.SMT;
+import tool.SMTs.SMTFactory;
+
 import java.util.*;
 
 public class ConditionStack {
     private Deque<SMT> conditions = new ArrayDeque<>();
 
-    private SMT fullCondition = SMT.createEmpty();
+    private SMT fullCondition = SMTFactory.createEmpty();
     private boolean scratched = false;
 
     public void push(SMT condition) {
@@ -34,20 +37,20 @@ public class ConditionStack {
         }
 
         if (fullCondition.isEmpty()) {
-            return SMT.createBool(true);
+            return SMTFactory.createBool(true);
         }
 
         return fullCondition;
     }
 
-    private SMT buildCondition( Iterator<SMT> it) {
-        if( !it.hasNext() ) return SMT.createEmpty();
+    private SMT buildCondition(Iterator<SMT> it) {
+        if( !it.hasNext() ) return SMTFactory.createEmpty();
 
         SMT current = it.next();
         if( !it.hasNext() ) return current;
 
 
-        return SMT.createAnd(current, buildCondition(it));
+        return SMTFactory.createAnd(current, buildCondition(it));
     }
 
     public boolean isEmpty() {

@@ -1,6 +1,7 @@
 package tool;
 import parser.SimpleCParser;
 import parser.SimpleCParser.ProcedureDeclContext;
+import tool.SMTs.SMT;
 
 import java.util.List;
 import java.util.Map;
@@ -59,13 +60,17 @@ public class VCGenerator {
 			result.append(ctx.accept(visitor));
 		}
 
-		result.append(proc.accept(visitor));
+		SMT funcSMT = proc.accept(visitor);
+
+//		if(funcSMT.hasCandidate()) {
+//			result.append(new Houdini(result, funcSMT));
+//		} else {
+			result.append(funcSMT);
+//		}
 
 		result.append("\n(check-sat)\n");
 		result.append("(get-model)\n");
 
 		return result;
 	}
-
-
 }
