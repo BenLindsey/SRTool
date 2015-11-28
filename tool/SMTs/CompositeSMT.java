@@ -3,7 +3,6 @@ package tool.SMTs;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Created by bl2312 on 28/11/15.
@@ -12,7 +11,7 @@ public class CompositeSMT implements SMT {
     List<SMT> SMTs = new ArrayList<>();
 
     public CompositeSMT(SMT... SMTs) {
-        this.SMTs = Arrays.asList(SMTs).stream().filter(SMT -> !SMT.isEmpty()).collect(Collectors.toList());
+        this.SMTs = Arrays.asList(SMTs);
     }
 
     public CompositeSMT(List<SMT> SMTs) {
@@ -21,26 +20,44 @@ public class CompositeSMT implements SMT {
 
     @Override
     public SMT asBoolean() {
-        return new CompositeSMT(SMTs.stream().map(SMT::asBoolean).collect(Collectors.toList()));
+        List<SMT> newSMTList = new ArrayList<>();
+        for(SMT smt : SMTs ) {
+            newSMTList.add(smt.asBoolean());
+        }
+        return new CompositeSMT(newSMTList);
     }
 
     @Override
     public SMT asBitVector() {
-        return new CompositeSMT(SMTs.stream().map(SMT::asBitVector).collect(Collectors.toList()));
+        List<SMT> newSMTList = new ArrayList<>();
+        for(SMT smt : SMTs ) {
+            newSMTList.add(smt.asBitVector());
+        }
+        return new CompositeSMT(newSMTList);
     }
 
     @Override
     public boolean isBoolean() {
-        return SMTs.stream().anyMatch(SMT::isBoolean);
+        for( SMT smt : SMTs ) {
+            if( !smt.isBoolean() ) return false;
+        }
+        return true;
     }
 
     @Override
     public boolean isEmpty() {
-        return SMTs.stream().allMatch(SMT::isEmpty);
+        for( SMT smt : SMTs ) {
+            if( !smt.isEmpty() ) return false;
+        }
+        return true;
     }
 
     @Override
     public String toString() {
-        return SMTs.stream().map(Object::toString).reduce("", String::concat);
+        StringBuilder result = new StringBuilder();
+        for( SMT smt : SMTs ) {
+            result.append(smt.toString());
+        }
+        return result.toString();
     }
 }
