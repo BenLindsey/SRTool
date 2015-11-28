@@ -30,7 +30,7 @@ public class CompositeSMT implements SMT {
     @Override
     public SMT asBitVector() {
         List<SMT> newSMTList = new ArrayList<>();
-        for(SMT smt : SMTs ) {
+        for(SMT smt : SMTs) {
             newSMTList.add(smt.asBitVector());
         }
         return new CompositeSMT(newSMTList);
