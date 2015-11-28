@@ -38,6 +38,7 @@ public class SingleCode implements Code {
         return isFunction ? CodeFactory.createFunctionHeader("main") : this;
     }
 
+    @Override
     public boolean isEmpty() {
         return text.isEmpty();
     }

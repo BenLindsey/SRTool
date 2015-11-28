@@ -53,6 +53,7 @@ public class CodeRunner {
     private int executeOutputFile() throws IOException, InterruptedException {
         Process process = Runtime.getRuntime().exec(String.format("./%s", EXECUTABLE_NAME));
 
+        //todo have timeout
         process.waitFor();
 
         int returnCode = process.exitValue();

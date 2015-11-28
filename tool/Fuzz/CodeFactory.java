@@ -41,8 +41,8 @@ public class CodeFactory {
         );
     }
 
-    public static Code createAssert(String text) {
-        return createFromFormat("assert(%s);\n", text);
+    public static Code createAssert(Code code) {
+        return createFromFormat("assert(%s);\n", code);
     }
 
     public static Code createExecutable(Code code) {
@@ -69,5 +69,57 @@ public class CodeFactory {
                 createFromFormat("while(%s)\n", condition),
                 createBlock(body)
         );
+    }
+
+    public static Code createAssume(Code condition) {
+        return createIf(createNot(condition), createReturn(createNumber(0)));
+    }
+
+    private static Code createNot(Code condition) {
+        return createFromFormat("!(%s)", condition);
+    }
+
+    private static Code createIf(Code condition, Code then) {
+        return new CompositeCode(
+                createFromFormat("if(%s)\n", condition),
+                createBlock(then)
+        );
+    }
+
+    public static Code createIf(Code condition, Code thenBlock, Code elseBlock) {
+        if(elseBlock == null) {
+            return createIf(condition, thenBlock);
+        }
+
+        return new CompositeCode(
+                createFromFormat("if(%s)\n", condition),
+                createBlock(thenBlock),
+                createFromFormat("else\n"),
+                createBlock(elseBlock)
+        );
+    }
+
+    private static Code createNumber(int i) {
+        return new SingleCode(Integer.toString(i));
+    }
+
+    public static Code createNumber(String s) {
+        return new SingleCode(s);
+    }
+
+    public static Code createVariable(String result) {
+        return new SingleCode(result);
+    }
+
+    public static Code createTernary(Code condition, Code thenBlock, Code elseBlock) {
+        return createFromFormat("((%s) ? (%s) : (%s))", condition, thenBlock, elseBlock);
+    }
+
+    public static Code createUnary(String operator, Code value) {
+        return createFromFormat("%s(%s)", operator, value);
+    }
+
+    public static Code createInfix(String operator, Code left, Code right) {
+        return createFromFormat("%s %s %s", left, operator, right);
     }
 }

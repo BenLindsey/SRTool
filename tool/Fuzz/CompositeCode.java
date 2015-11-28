@@ -69,4 +69,15 @@ public class CompositeCode implements Code {
         return new CompositeCode(codes);
     }
 
+    @Override
+    public boolean isEmpty() {
+        for(Code code : codes) {
+            if(!code.isEmpty()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 }
