@@ -105,26 +105,7 @@ public class Z3 {
         }
     }
 
-    void validateFile(String filename, boolean useLoopUnrolling) throws IOException, InterruptedException {
-        ANTLRInputStream input = new ANTLRInputStream(new FileInputStream(filename));
-        SimpleCLexer lexer = new SimpleCLexer(input);
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        SimpleCParser parser = new SimpleCParser(tokens);
-        SimpleCParser.ProgramContext ctx = parser.program();
-        if(parser.getNumberOfSyntaxErrors() > 0) {
-            System.exit(1);
-        }
-        Typechecker tc = new Typechecker();
-        tc.visit(ctx);
-        tc.resolve();
-        if(tc.hasErrors()) {
-            System.err.println("Errors were detected when typechecking " + filename + ":");
-            for(String err : tc.getErrors()) {
-                System.err.println("  " + err);
-            }
-            System.exit(1);
-        }
-
+    void validate(SimpleCParser.ProgramContext ctx, boolean useLoopUnrolling) throws IOException, InterruptedException {
         ProcedureVisitor procedureVisitor = new ProcedureVisitor();
         Map<String, ProcedureSummarisation> summarisationMap = ctx.accept(procedureVisitor);
 
