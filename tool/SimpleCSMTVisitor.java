@@ -248,6 +248,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         havoc(ctx.body.accept(modSetVisitor));
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
+            if (invariant.invariant() == null) continue;
             result = SMTFactory.merge(result, assumeCondition(invariant.invariant().condition));
         }
 
