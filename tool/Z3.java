@@ -19,7 +19,7 @@ import java.util.Map;
 public class Z3 {
     private static final int TIMEOUT = 30;
     private static final int MIN_LOOP_UNROLLING_DEPTH = 1;
-    private static final int MAX_LOOP_UNROLLING_DEPTH = 100;
+    private static final int MAX_LOOP_UNROLLING_DEPTH = 1000;
 
     private boolean verbose = SRTool.verbose;
 
@@ -68,7 +68,21 @@ public class Z3 {
         }
 
         if (queryResult.startsWith("sat")) {
-            return Z3Result.INCORRECT;
+
+            List<Integer> failingAssertionIds = new ArrayList<>();
+            for (String line : queryResult.split("\n")) {
+                if (line.contains("--assertion") && line.contains("false")) {
+                    String number = "";
+                    for (char c : line.toCharArray()) {
+                        if (Character.isDigit(c)) {
+                            number += c;
+                        }
+                    }
+                    failingAssertionIds.add(Integer.parseInt(number));
+                }
+            }
+
+            return Z3Result.INCORRECTWithFailingAssertion(failingAssertionIds);
         }
 
         if (!queryResult.startsWith("unsat")) {
@@ -99,14 +113,35 @@ public class Z3 {
 
         if (useLoopUnrolling) {
             int unwindingDepth = MIN_LOOP_UNROLLING_DEPTH;
-            while (unwindingDepth <= MAX_LOOP_UNROLLING_DEPTH) {
+            while (true) {
+
+                boolean allCorrect = true;
                 for (SimpleCParser.ProcedureDeclContext proc : ctx.procedures) {
                     VCGenerator vcgen = new VCGenerator(proc, ctx.globals, summarisationMap, unwindingDepth);
-                    handleResult(getResult(vcgen.generateVC().toString()));
+                    Z3Result z3Result = getResult(vcgen.generateVC().toString());
+
+                    if (z3Result == Z3Result.CORRECT) continue;
+                    allCorrect = false;
+
+                    boolean failedUnwindingAssertion = false;
+                    for( int i : vcgen.getUnwindingAssertionIds()) {
+                        if(z3Result.getFailingAssertions().contains(i)) {
+                            failedUnwindingAssertion = true;
+                            break;
+                        }
+                    }
+
+                    if( failedUnwindingAssertion ) {
+                        // Exponentially increase depth
+                        unwindingDepth *= 2;
+                        if (unwindingDepth > MAX_LOOP_UNROLLING_DEPTH) handleResult(Z3Result.UNKNOWN);
+                        break;
+                    } else {
+                        handleResult(z3Result);
+                    }
                 }
 
-                // Exponentially increase depth
-                unwindingDepth *= 2;
+                if( allCorrect ) break;
             }
         } else {
             for (SimpleCParser.ProcedureDeclContext proc : ctx.procedures) {

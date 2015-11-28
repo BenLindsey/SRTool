@@ -7,21 +7,21 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class ImplicationStore {
-    private Deque<ConditionStack> implicationsStack = new ArrayDeque<>();
+    private Deque<ConditionStore> implicationsStack = new ArrayDeque<>();
     private Deque<SMT> predicate = new ArrayDeque<>();
 
     public ImplicationStore() {
-        implicationsStack.push(new ConditionStack());
+        implicationsStack.push(new ConditionStore());
     }
 
     public void enterScope(SMT predicate) {
         this.predicate.push(predicate);
-        implicationsStack.push(new ConditionStack());
+        implicationsStack.push(new ConditionStore());
     }
 
     public void exitScope() {
         if (!predicate.isEmpty()) {
-            ConditionStack predicatedConditions = implicationsStack.pop();
+            ConditionStore predicatedConditions = implicationsStack.pop();
             implicationsStack.peek().pushConditions(predicatedConditions, predicate.pop());
         } else {
             implicationsStack.pop();
@@ -36,7 +36,7 @@ public class ImplicationStore {
     public SMT getFullImplication() {
         SMT result = SMTFactory.createEmpty();
 
-        for (ConditionStack conditions : implicationsStack) {
+        for (ConditionStore conditions : implicationsStack) {
             if (result.isEmpty()) {
                 result = conditions.getFullCondition();
             } else {

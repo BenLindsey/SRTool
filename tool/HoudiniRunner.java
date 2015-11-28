@@ -18,8 +18,9 @@ public class HoudiniRunner {
         Z3Result result = staticallyVerify(funcSMT);
 
         switch (result) {
-            case INCORRECT_DUE_TO_CANDIDATE:
-                return eliminateCandidates(funcSMT.withoutCandidate(result.getFailingCandidate()));
+            // TODO: FIX THIS
+            // case INCORRECT:
+            //     return eliminateCandidates(funcSMT.withoutCandidate(result.getFailingCandidate()));
 
             default:
                 return funcSMT.toString();

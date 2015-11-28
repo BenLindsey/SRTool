@@ -93,7 +93,7 @@ public class Variables {
 
         String freshVariable = fresh(variable);
 
-        declarations = SMTFactory.merge(declarations, SMTFactory.createDeclaration(freshVariable));
+        declarations = SMTFactory.merge(declarations, SMTFactory.createBitVectorDeclaration(freshVariable));
         return freshVariable;
     }
 

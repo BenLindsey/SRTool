@@ -1,5 +1,8 @@
 package tool.SMTs;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Created by bl2312 on 28/11/15.
  */
@@ -23,12 +26,34 @@ public class SMTFactory {
         return new SingleSMT(text);
     }
 
-    public static SMT createAnd(SMT left, SMT right) {
-        return new SingleSMT("(and " + left.asBoolean() + " " + right.asBoolean() + ")\n", true);
+    public static SMT createBooleanVariable(String text) {
+        return new SingleSMT(text, true);
     }
 
-    public static SMT createAssign(String freshVariable, SMT expression) {
+    public static SMT createAnd(List<SMT> expressions) {
+        assert (expressions.size() >= 2);
+
+        StringBuilder result = new StringBuilder();
+        result.append("(and");
+
+        for( SMT smt : expressions ) {
+            result.append(" ").append(smt.asBoolean());
+        }
+
+        result.append(")");
+        return new SingleSMT(result.toString(), true);
+    }
+
+    public static SMT createAnd(SMT... expressions) {
+        return createAnd(Arrays.asList(expressions));
+    }
+
+    public static SMT createBitVectorAssign(String freshVariable, SMT expression) {
         return new SingleSMT("(assert (= " + freshVariable + " " + expression.asBitVector() + "))\n");
+    }
+
+    public static SMT createBoolAssign(String variable, SMT expression) {
+        return new SingleSMT("(assert (= " + variable + " " + expression.asBoolean() + "))\n");
     }
 
     public static SMT createImplication(SMT pred, SMT assertion) {
@@ -45,8 +70,12 @@ public class SMTFactory {
                 ifVariable.isBoolean() || elseVariable.isBoolean());
     }
 
-    public static SMT createDeclaration(String variable) {
+    public static SMT createBitVectorDeclaration(String variable) {
         return new SingleSMT("(declare-fun " + variable + " () (_ BitVec 32))\n");
+    }
+
+    public static SMT createBooleanDeclaration(String variable) {
+        return new SingleSMT("(declare-fun " + variable + " () Bool)\n");
     }
 
     public static SMT createProcedureDecl(SMT declarations, SMT result) {
