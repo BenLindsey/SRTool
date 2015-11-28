@@ -259,6 +259,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         // Add initial invarient assertions
         SMT result = SMTFactory.createEmpty();
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
+            if( invariant.invariant() == null ) continue;
             result = SMTFactory.merge(result, assertCondition(invariant.invariant().condition));
         }
 
@@ -300,6 +301,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         }
 
         for(SimpleCParser.LoopInvariantContext invariant : invariantAnnotations) {
+            if( invariant.invariant() == null ) continue;
+
             SimpleCParser.AssertStmtContext assertion = new SimpleCParser.AssertStmtContext(blockStmt, 0);
             assertion.condition = invariant.invariant().condition;
 
