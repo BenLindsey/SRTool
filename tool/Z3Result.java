@@ -6,17 +6,16 @@ package tool;
 public enum Z3Result {
     CORRECT, INCORRECT, INCORRECT_DUE_TO_CANDIDATE, UNKNOWN;
 
-    private int failingCandidate;
-
-    Z3Result() {
-        failingCandidate = -1;
-    }
-
-    Z3Result(int failingCandidate) {
-        this.failingCandidate = failingCandidate;
-    }
+    private int failingCandidate = -1;
 
     public int getFailingCandidate() {
       return failingCandidate;
+    }
+
+    public static Z3Result INCORRECTWithFailingCandidate(int id) {
+        Z3Result result = Z3Result.INCORRECT;
+        result.failingCandidate = id;
+
+        return result;
     }
 }
