@@ -1,10 +1,13 @@
 package tool;
 
+import tool.SMTs.SMT;
+import tool.SMTs.SMTFactory;
+
 import java.util.*;
 
 public class Variables {
     private static Map<String, Integer> nextIds = new HashMap<>();
-    private static SMT declarations = SMT.createEmpty();
+    private static SMT declarations = SMTFactory.createEmpty();
     private Map<String, Deque<Integer>> idMap = new HashMap<>();
     private Scope scope = new Scope();
 
@@ -90,7 +93,7 @@ public class Variables {
 
         String freshVariable = fresh(variable);
 
-        declarations = SMT.merge(declarations, SMT.createDeclaration(freshVariable));
+        declarations = SMTFactory.merge(declarations, SMTFactory.createDeclaration(freshVariable));
         return freshVariable;
     }
 
@@ -100,6 +103,6 @@ public class Variables {
 
     public static void refresh() {
         nextIds = new HashMap<>();
-        declarations = SMT.createEmpty();
+        declarations = SMTFactory.createEmpty();
     }
 }

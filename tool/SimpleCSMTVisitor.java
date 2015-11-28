@@ -4,6 +4,8 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
 import parser.SimpleCParser.StmtContext;
+import tool.SMTs.SMTFactory;
+import tool.SMTs.SMT;
 
 import java.util.*;
 
@@ -39,20 +41,20 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
-        SMT result = SMT.createEmpty();
+        SMT result = SMTFactory.createEmpty();
 
         for(SimpleCParser.FormalParamContext param : ctx.formals) {
-            result = SMT.merge(result, visit(param));
+            result = SMTFactory.merge(result, visit(param));
         }
 
         // Visit pre conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
             if( prepost.requires() == null ) continue;
-            result = SMT.merge(result, (visit(prepost.requires())));
+            result = SMTFactory.merge(result, (visit(prepost.requires())));
         }
 
         for(StmtContext statement : ctx.stmts) {
-            result = SMT.merge(result, (visit(statement)));
+            result = SMTFactory.merge(result, (visit(statement)));
         }
 
         // Save returnExpr for use in \return annotations
@@ -61,26 +63,26 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         // Visit post conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
             if( prepost.ensures() == null ) continue;
-            result = SMT.merge(result, visit(prepost.ensures()));
+            result = SMTFactory.merge(result, visit(prepost.ensures()));
         }
 
         // Add assertions
         SMT assertionsSMT = assertions.getFullCondition();
 
         if (!assertionsSMT.isEmpty()) {
-            result = SMT.merge(result, SMT.createAssertNot(assertions.getFullCondition()));
+            result = SMTFactory.merge(result, SMTFactory.createAssertNot(assertions.getFullCondition()));
         }
 
         // Add declarations to the top of the output
 
-        return SMT.createProcedureDecl(Variables.getDeclarations(), result);
+        return SMTFactory.createProcedureDecl(Variables.getDeclarations(), result);
     }
 
     @Override
     public SMT visitRequires(SimpleCParser.RequiresContext ctx) {
         SMT condition = visit(ctx.condition);
         implicationStore.pushImplication(condition);
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
     }
 
     @Override
@@ -89,23 +91,23 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         SMT pred = implicationStore.getFullImplication();
         if( !pred.isEmpty() ) {
-            assertion = SMT.createImplication(pred, assertion);
+            assertion = SMTFactory.createImplication(pred, assertion);
         }
 
         assertions.push(assertion);
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
     }
 
     @Override
     public SMT visitFormalParam(SimpleCParser.FormalParamContext ctx) {
         variables.addSMTDeclaration(ctx.ident.getText(), true);
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
     }
 
     @Override
     public SMT visitVarDecl(SimpleCParser.VarDeclContext ctx) {
         variables.addSMTDeclaration(ctx.ident.getText(), true);
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
     }
 
     @Override
@@ -117,14 +119,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private SMT assign(SimpleCParser.VarrefContext ctx, SMT expression) {
         SMT currentVariable = visit(ctx);
         String freshVariable = variables.addSMTDeclaration(currentVariable.toString(), false);
-        return SMT.createAssign(freshVariable, expression);
+        return SMTFactory.createAssign(freshVariable, expression);
 
     }
 
     @Override
     public SMT visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
         havoc(ctx.var.getText());
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
     }
 
     private void havoc(String variable) {
@@ -143,7 +145,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         // Save current state
         SMT oldReturnExpr = returnExpr;
-        Map<String,SMT> oldParameterMap = parameterMap;
+        Map<String, SMT> oldParameterMap = parameterMap;
 
         parameterMap = new HashMap<>();
 
@@ -161,7 +163,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         havoc(summarisation.getModset());
 
         String returnVar = ctx.callee.getText() + "_ret";
-        SMT newReturnExpr = SMT.createVariable(variables.addSMTDeclaration(returnVar, true));
+        SMT newReturnExpr = SMTFactory.createVariable(variables.addSMTDeclaration(returnVar, true));
 
         returnExpr = newReturnExpr;
 
@@ -187,12 +189,12 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         SMT assertion = visit(condition);
 
         if( !pred.isEmpty() ) {
-            assertion = SMT.createImplication(pred, assertion);
+            assertion = SMTFactory.createImplication(pred, assertion);
         }
 
         assertions.push(assertion);
 
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
     }
 
     @Override
@@ -201,11 +203,11 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     }
 
     private SMT assumeCondition(SimpleCParser.ExprContext condition) {
-        SMT assumption = condition == FALSE_EXPRESSION ? SMT.createBool(false) : visit(condition);
+        SMT assumption = condition == FALSE_EXPRESSION ? SMTFactory.createBool(false) : visit(condition);
 
         implicationStore.pushImplication(assumption);
 
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
 
     }
 
@@ -214,21 +216,21 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         if( UNROLL_LOOPS ) return visitWhileStmtUnroll(ctx);
 
-        SMT result = SMT.createEmpty();
+        SMT result = SMTFactory.createEmpty();
 
         SimpleCParser.ExprContext condition = ctx.condition;
 
         ParserRuleContext dummyNode = new ParserRuleContext();
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
-            result = SMT.merge(result, assertCondition(invariant.invariant().condition));
+            result = SMTFactory.merge(result, visit(invariant));
         }
 
         ModSetVisitor modSetVisitor = new ModSetVisitor();
         havoc(ctx.body.accept(modSetVisitor));
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
-            result = SMT.merge(result, assumeCondition(invariant.invariant().condition));
+            result = SMTFactory.merge(result, assumeCondition(invariant.invariant().condition));
         }
 
         SimpleCParser.IfStmtContext ifBlock = new SimpleCParser.IfStmtContext(dummyNode, 0);
@@ -248,22 +250,22 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         assumption.condition = FALSE_EXPRESSION;
         ifBlock.thenBlock.addChild(assumption);
 
-        return SMT.merge(result, visit(ifBlock));
+        return SMTFactory.merge(result, visit(ifBlock));
     }
 
     private SMT visitWhileStmtUnroll(SimpleCParser.WhileStmtContext ctx) {
         ParserRuleContext dummyNode = new ParserRuleContext();
 
         // Add initial invarient assertions
-        SMT result = SMT.createEmpty();
+        SMT result = SMTFactory.createEmpty();
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
-            result = SMT.merge(result, assertCondition(invariant.invariant().condition));
+            result = SMTFactory.merge(result, assertCondition(invariant.invariant().condition));
         }
 
         SimpleCParser.IfStmtContext ifStmt = new SimpleCParser.IfStmtContext(dummyNode, 0);
         unrollLoopAsNestedIfs(ifStmt, ctx.condition, ctx.body, ctx.invariantAnnotations, UNROLLING_DEPTH);
 
-        return SMT.merge(result, visit(ifStmt));
+        return SMTFactory.merge(result, visit(ifStmt));
     }
 
     private void unrollLoopAsNestedIfs(SimpleCParser.IfStmtContext ifStmt,
@@ -317,10 +319,10 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     @Override
     public SMT visitIfStmt(SimpleCParser.IfStmtContext ctx) {
 
-        SMT builder = SMT.createEmpty();
+        SMT builder = SMTFactory.createEmpty();
 
         SMT predicate = visit(ctx.condition);
-        SMT notPredicate = SMT.createNot(predicate);
+        SMT notPredicate = SMTFactory.createNot(predicate);
 
         Variables thenBlock;
         Variables elseBlock = variables;
@@ -328,7 +330,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         variables.enterScope();
         implicationStore.enterScope(predicate);
         implicationStore.pushImplication(predicate);
-        builder = SMT.merge(builder, super.visitBlockStmt(ctx.thenBlock));
+        builder = SMTFactory.merge(builder, super.visitBlockStmt(ctx.thenBlock));
         implicationStore.exitScope();
         thenBlock = variables.exitScope();
 
@@ -336,7 +338,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             variables.enterScope();
             implicationStore.enterScope(notPredicate);
             implicationStore.pushImplication(notPredicate);
-            builder = SMT.merge(builder, super.visitBlockStmt(ctx.elseBlock));
+            builder = SMTFactory.merge(builder, super.visitBlockStmt(ctx.elseBlock));
             implicationStore.exitScope();
             elseBlock = variables.exitScope();
         }
@@ -344,16 +346,16 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         ModSetVisitor modSetVisitor = new ModSetVisitor();
 
         for( String var : union(ctx.thenBlock.accept(modSetVisitor),  ctx.elseBlock == null ? new HashSet<String>() : ctx.elseBlock.accept(modSetVisitor))) {
-            SMT ite = SMT.createITE(
+            SMT ite = SMTFactory.createITE(
                     predicate,
-                    SMT.createVariable((thenBlock.getActualDeclaredVariables().contains(var) ? variables : thenBlock).getCurrentVariable(var)),
-                    SMT.createVariable((elseBlock.getActualDeclaredVariables().contains(var) ? variables : elseBlock).getCurrentVariable(var))
+                    SMTFactory.createVariable((thenBlock.getActualDeclaredVariables().contains(var) ? variables : thenBlock).getCurrentVariable(var)),
+                    SMTFactory.createVariable((elseBlock.getActualDeclaredVariables().contains(var) ? variables : elseBlock).getCurrentVariable(var))
             );
 
             // Add fresh variable for var
             variables.addSMTDeclaration(var, false);
 
-            builder = SMT.merge(builder, SMT.createAssert(variables.getCurrentVariable(var),  ite));
+            builder = SMTFactory.merge(builder, SMTFactory.createAssert(variables.getCurrentVariable(var),  ite));
         }
 
         return builder;
@@ -369,10 +371,10 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     public SMT visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
         variables.enterScope();
 
-        SMT result = SMT.createEmpty();
+        SMT result = SMTFactory.createEmpty();
 
         for(StmtContext stmt :ctx.stmts) {
-            result = SMT.merge(result, visit(stmt));
+            result = SMTFactory.merge(result, visit(stmt));
         }
 
         Variables vars = variables.exitScope();
@@ -382,8 +384,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         for( String var : ctx.accept(modSetVisitor)) {
 
             if( !vars.getActualDeclaredVariables().contains(var) ) {
-                SMT assignment = SMT.createAssign(variables.addSMTDeclaration(var, false), SMT.createVariable(vars.getCurrentVariable(var)));
-                result = SMT.merge(result, assignment);
+                SMT assignment = SMTFactory.createAssign(variables.addSMTDeclaration(var, false), SMTFactory.createVariable(vars.getCurrentVariable(var)));
+                result = SMTFactory.merge(result, assignment);
             }
         }
 
@@ -394,6 +396,11 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     public SMT visitInvariant(SimpleCParser.InvariantContext ctx) {
         return assertCondition(ctx.condition);
     }
+
+//    @Override
+//    public SMTs visitCandidateInvariant(SimpleCParser.CandidateInvariantContext ctx) {
+//        return // todo SMTFactory.createCandidateInvariant(visit(ctx.condition));
+//    }
 
     @Override
     public SMT visitTernExpr(SimpleCParser.TernExprContext ctx) {
@@ -462,7 +469,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitOldExpr(SimpleCParser.OldExprContext ctx) {
-        return SMT.createVariable(super.visitOldExpr(ctx).toString() + "-0");
+        return SMTFactory.createVariable(super.visitOldExpr(ctx).toString() + "-0");
     }
 
     @Override
@@ -472,26 +479,26 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             return parameterMap.get(variable);
         }
 
-        return SMT.createVariable(variables.getCurrentVariable(variable));
+        return SMTFactory.createVariable(variables.getCurrentVariable(variable));
     }
 
     @Override
     public SMT visitVarIdentifier(SimpleCParser.VarIdentifierContext ctx) {
-        return SMT.createVariable(ctx.name.getText());
+        return SMTFactory.createVariable(ctx.name.getText());
     }
 
     @Override
     public SMT visitNumberExpr(SimpleCParser.NumberExprContext ctx) {
-        return SMT.createNumber(ctx.number.getText());
+        return SMTFactory.createNumber(ctx.number.getText());
     }
 
     @Override
     protected SMT defaultResult() {
-        return SMT.createEmpty();
+        return SMTFactory.createEmpty();
     }
 
     @Override
     protected SMT aggregateResult(SMT aggregate, SMT nextResult) {
-        return SMT.merge(aggregate, nextResult);
+        return SMTFactory.merge(aggregate, nextResult);
     }
 }
