@@ -45,7 +45,7 @@ public class CompositeSMT implements SMT {
     public SMT withoutCandidate(int failingCandidate) {
         List<SMT> toKeep = new ArrayList<>();
 
-        for(SMT smt: toKeep) {
+        for(SMT smt: SMTs) {
             SMT smtWithoutCandidate = smt.withoutCandidate(failingCandidate);
 
             if(!smtWithoutCandidate.isEmpty()) {
