@@ -62,11 +62,11 @@ public class VCGenerator {
 
 		SMT funcSMT = proc.accept(visitor);
 
-//		if(funcSMT.hasCandidate()) {
-//			result.append(new Houdini(result, funcSMT));
-//		} else {
+		if(funcSMT.isCandidate()) {
+			result.append(new HoudiniRunner(result.toString()).eliminateCandidates(funcSMT));
+		} else {
 			result.append(funcSMT);
-//		}
+		}
 
 		result.append("\n(check-sat)\n");
 		result.append("(get-model)\n");

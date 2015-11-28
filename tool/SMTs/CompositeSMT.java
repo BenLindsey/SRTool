@@ -37,6 +37,26 @@ public class CompositeSMT implements SMT {
     }
 
     @Override
+    public int getCandidateId() {
+        return -1;
+    }
+
+    @Override
+    public SMT withoutCandidate(int failingCandidate) {
+        List<SMT> toKeep = new ArrayList<>();
+
+        for(SMT smt: toKeep) {
+            SMT smtWithoutCandidate = smt.withoutCandidate(failingCandidate);
+
+            if(!smtWithoutCandidate.isEmpty()) {
+                toKeep.add(smtWithoutCandidate);
+            }
+        }
+
+        return new CompositeSMT(toKeep);
+    }
+
+    @Override
     public boolean isBoolean() {
         for( SMT smt : SMTs ) {
             if( !smt.isBoolean() ) return false;
@@ -59,5 +79,13 @@ public class CompositeSMT implements SMT {
             result.append(smt.toString());
         }
         return result.toString();
+    }
+
+    @Override
+    public boolean isCandidate() {
+        for( SMT smt : SMTs ) {
+            if( !smt.isCandidate() ) return true;
+        }
+        return false;
     }
 }
