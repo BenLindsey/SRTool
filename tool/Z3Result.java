@@ -15,7 +15,7 @@ public enum Z3Result {
         return failingAssertions;
     }
 
-    public static Z3Result INCORRECTWithFailingAssertion(List<Integer> ids) {
+    public static Z3Result incorrectWithFailingAssertions(List<Integer> ids) {
         Z3Result result = Z3Result.INCORRECT;
         result.failingAssertions = ids;
 

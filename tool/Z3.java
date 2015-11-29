@@ -1,13 +1,9 @@
 package tool;
 
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import parser.SimpleCLexer;
 import parser.SimpleCParser;
 import util.ProcessExec;
 import util.ProcessTimeoutException;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +78,7 @@ public class Z3 {
                 }
             }
 
-            return Z3Result.INCORRECTWithFailingAssertion(failingAssertionIds);
+            return Z3Result.incorrectWithFailingAssertions(failingAssertionIds);
         }
 
         if (!queryResult.startsWith("unsat")) {
