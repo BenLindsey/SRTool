@@ -102,8 +102,6 @@ public class Z3 {
     }
 
     void validate(SimpleCParser.ProgramContext ctx, boolean useLoopUnrolling) throws IOException, InterruptedException {
-        ProcedureVisitor procedureVisitor = new ProcedureVisitor();
-        Map<String, ProcedureSummarisation> summarisationMap = ctx.accept(procedureVisitor);
 
 //		assert ctx.procedures.size() == 1; // For Part 1 of the coursework, this can be assumed
 
@@ -111,16 +109,19 @@ public class Z3 {
             int unwindingDepth = MIN_LOOP_UNROLLING_DEPTH;
             while (true) {
 
+                HoudiniProcedureRunner procedureRunner = new HoudiniProcedureRunner(ctx, unwindingDepth);
+
                 boolean allCorrect = true;
-                for (SimpleCParser.ProcedureDeclContext proc : ctx.procedures) {
-                    VCGenerator vcgen = new VCGenerator(proc, ctx.globals, summarisationMap, unwindingDepth);
-                    Z3Result z3Result = getResult(vcgen.generateVC().toString());
+
+                for (VerificationResult verificationResult : procedureRunner.verify()) {
+
+                    Z3Result z3Result = verificationResult.getZ3Result();
 
                     if (z3Result == Z3Result.CORRECT) continue;
                     allCorrect = false;
 
                     boolean failedUnwindingAssertion = false;
-                    for( int i : vcgen.getUnwindingAssertionIds()) {
+                    for( int i : verificationResult.getUnwindingAssertionIds()) {
                         if(z3Result.getFailingAssertions().contains(i)) {
                             failedUnwindingAssertion = true;
                             break;
@@ -140,9 +141,9 @@ public class Z3 {
                 if( allCorrect ) break;
             }
         } else {
-            for (SimpleCParser.ProcedureDeclContext proc : ctx.procedures) {
-                VCGenerator vcgen = new VCGenerator(proc, ctx.globals, summarisationMap);
-                handleResult(getResult(vcgen.generateVC().toString()));
+            HoudiniProcedureRunner procedureRunner = new HoudiniProcedureRunner(ctx);
+            for (VerificationResult verificationResult : procedureRunner.verify()) {
+                handleResult(verificationResult.getZ3Result());
             }
         }
 

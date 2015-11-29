@@ -5,16 +5,13 @@ import tool.SMTs.SMT;
 
 import java.util.Map;
 
-/**
- * Created by bl2312 on 28/11/15.
- */
-public class HoudiniRunner {
+public class HoudiniLoopRunner {
     private SimpleCSMTVisitor visitor;
     private final Map<String, ProcedureSummarisation> summarisationMap;
     private final SimpleCParser.ProcedureDeclContext proc;
     private final String programHead;
 
-    public HoudiniRunner(SimpleCSMTVisitor visitor, SimpleCParser.ProcedureDeclContext proc, Map<String, ProcedureSummarisation> summarisationMap, String programHead) {
+    public HoudiniLoopRunner(SimpleCSMTVisitor visitor, SimpleCParser.ProcedureDeclContext proc, Map<String, ProcedureSummarisation> summarisationMap, String programHead) {
         this.visitor = visitor;
         this.proc = proc;
         this.summarisationMap = summarisationMap;
@@ -44,7 +41,7 @@ public class HoudiniRunner {
             if (visitor.getAssertionToCandidateInvariantMap().containsKey(assertionId)) {
                 eliminate(visitor.getAssertionToCandidateInvariantMap().get(assertionId));
                 eliminatedInvariants = true;
-                System.err.println("Eliminated assertion " + assertionId);
+                System.err.println("Eliminated invariant at assertion " + assertionId);
             }
         }
         return eliminatedInvariants;
