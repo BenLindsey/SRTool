@@ -28,6 +28,10 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private Map<String, SMT> parameterMap;
 
     private List<Integer> unwindingAssertionIds = new ArrayList<>();
+    private Map<Integer, SimpleCParser.CandidateInvariantContext> assertionToCandidateInvariantMap = new HashMap<>();
+    private Set<SimpleCParser.CandidateInvariantContext> eliminatedCandidateInvariants = new HashSet<>();
+
+    private List<SimpleCParser.ExprContext> candidateInvariantConditions = new ArrayList<>();
 
     public SimpleCSMTVisitor(Map<String, ProcedureSummarisation> summarisationMap) {
         this.summarisationMap = summarisationMap;
@@ -43,6 +47,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     public List<Integer> getUnwindingAssertionIds() {
         return unwindingAssertionIds;
+    }
+
+    public Map<Integer, SimpleCParser.CandidateInvariantContext> getAssertionToCandidateInvariantMap() {
+        return assertionToCandidateInvariantMap;
+    }
+
+    public Set<SimpleCParser.CandidateInvariantContext> getEliminatedCandidateInvariants() {
+        return eliminatedCandidateInvariants;
     }
 
     public int assertionsSize() {
@@ -210,6 +222,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         if( condition == FALSE_EXPRESSION ) {
             unwindingAssertionIds.add(assertionId);
+        } else if (candidateInvariantConditions.contains(condition)) {
+            assertionToCandidateInvariantMap.put(assertionId, (SimpleCParser.CandidateInvariantContext) condition.getParent());
         }
 
         return SMTFactory.createEmpty();
@@ -241,34 +255,63 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         ParserRuleContext dummyNode = new ParserRuleContext();
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
-            result = SMTFactory.merge(result, visit(invariant));
+            if (invariant.invariant() != null) {
+                result = SMTFactory.merge(result, assertCondition(invariant.invariant().condition));
+            } else {
+                if (!eliminatedCandidateInvariants.contains(invariant.candidateInvariant())) {
+                    candidateInvariantConditions.add(invariant.candidateInvariant().condition);
+                    result = SMTFactory.merge(result, assertCondition(invariant.candidateInvariant().condition));
+                }
+            }
         }
 
         ModSetVisitor modSetVisitor = new ModSetVisitor();
         havoc(ctx.body.accept(modSetVisitor));
 
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
-            result = SMTFactory.merge(result, assumeCondition(invariant.invariant().condition));
+            if (invariant.invariant() != null) {
+                result = SMTFactory.merge(result, assumeCondition(invariant.invariant().condition));
+            } else if (!eliminatedCandidateInvariants.contains(invariant.candidateInvariant())) {
+                result = SMTFactory.merge(result, assumeCondition(invariant.candidateInvariant().condition));
+            }
         }
 
         SimpleCParser.IfStmtContext ifBlock = new SimpleCParser.IfStmtContext(dummyNode, 0);
         ifBlock.condition = condition;
         ifBlock.thenBlock = ctx.body;
 
+        // Keep count of assertions/assumptions nodes we manually add.
+        int childrenAdded = 0;
+
         for(SimpleCParser.LoopInvariantContext invariant : ctx.invariantAnnotations) {
             SimpleCParser.AssertStmtContext assertion = new SimpleCParser.AssertStmtContext(ifBlock.thenBlock, 0);
-            assertion.condition = invariant.invariant().condition;
 
-            // Add invariant assertions to end of if block
-            ifBlock.thenBlock.addChild(assertion);
+            if (invariant.invariant() != null) {
+                assertion.condition = invariant.invariant().condition;
+                ifBlock.thenBlock.addChild(assertion);
+                childrenAdded++;
+            } else if (!eliminatedCandidateInvariants.contains(invariant.candidateInvariant())) {
+                assertion.condition = invariant.candidateInvariant().condition;
+                ifBlock.thenBlock.addChild(assertion);
+                childrenAdded++;
+            }
+
         }
 
         // Assume false to block further loop execution
         SimpleCParser.AssumeStmtContext assumption = new SimpleCParser.AssumeStmtContext(ifBlock.thenBlock, 0);
         assumption.condition = FALSE_EXPRESSION;
         ifBlock.thenBlock.addChild(assumption);
+        childrenAdded++;
 
-        return SMTFactory.merge(result, visit(ifBlock));
+        SMT finalResult = SMTFactory.merge(result, visit(ifBlock));
+
+        // Remove manual assertions/assumptions so we can reuse this ctx.
+        for (int i = 0; i < childrenAdded; i++) {
+            ifBlock.thenBlock.removeLastChild();
+        }
+
+        return finalResult;
     }
 
     private SMT visitWhileStmtUnroll(SimpleCParser.WhileStmtContext ctx) {
@@ -415,11 +458,6 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         }
 
         return result;
-    }
-
-    @Override
-    public SMT visitInvariant(SimpleCParser.InvariantContext ctx) {
-        return assertCondition(ctx.condition);
     }
 
 //    @Override

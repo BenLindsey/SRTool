@@ -64,8 +64,8 @@ public class VCGenerator {
 
 		SMT funcSMT = proc.accept(visitor);
 
-		if(funcSMT.isCandidate()) {
-			result.append(new HoudiniRunner(result.toString()).eliminateCandidates(funcSMT));
+		if (!visitor.getAssertionToCandidateInvariantMap().isEmpty()) {
+			result.append(new HoudiniRunner(visitor, proc, summarisationMap, result.toString()).eliminateCandidates(funcSMT));
 		} else {
 			result.append(funcSMT);
 		}
