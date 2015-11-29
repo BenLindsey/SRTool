@@ -28,10 +28,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private Map<String, SMT> parameterMap;
 
     private List<Integer> unwindingAssertionIds = new ArrayList<>();
+
     private Map<Integer, SimpleCParser.CandidateInvariantContext> assertionToCandidateInvariantMap = new HashMap<>();
     private Set<SimpleCParser.CandidateInvariantContext> eliminatedCandidateInvariants = new HashSet<>();
-
     private List<SimpleCParser.ExprContext> candidateInvariantConditions = new ArrayList<>();
+
+    private Map<Integer, SimpleCParser.PrepostContext> assertionToCandidatePrePostMap = new HashMap<>();
+    private Set<SimpleCParser.PrepostContext> eliminatedPrePosts = new HashSet<>();
+    private List<SimpleCParser.ExprContext> candidatePrePostConditions = new ArrayList<>();
 
     public SimpleCSMTVisitor(Map<String, ProcedureSummarisation> summarisationMap) {
         this.summarisationMap = summarisationMap;
@@ -57,6 +61,14 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         return eliminatedCandidateInvariants;
     }
 
+    public Set<SimpleCParser.PrepostContext> getEliminatedPrePosts() {
+        return eliminatedPrePosts;
+    }
+
+    public Map<Integer, SimpleCParser.PrepostContext> getAssertionToCandidatePrePostMap() {
+        return assertionToCandidatePrePostMap;
+    }
+
     public int assertionsSize() {
         return assertions.size();
     }
@@ -71,8 +83,11 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         // Visit pre conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
-            if( prepost.requires() == null ) continue;
-            result = SMTFactory.merge(result, (visit(prepost.requires())));
+            if( prepost.requires() != null ) {
+                result = SMTFactory.merge(result, (visit(prepost.requires())));
+            } else if (prepost.candidateRequires() != null) {
+                result = SMTFactory.merge(result, visit(prepost.candidateRequires()));
+            }
         }
 
         for(StmtContext statement : ctx.stmts) {
@@ -84,8 +99,12 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         // Visit post conditions
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
-            if( prepost.ensures() == null ) continue;
-            result = SMTFactory.merge(result, visit(prepost.ensures()));
+            if( prepost.ensures() != null ) {
+                result = SMTFactory.merge(result, visit(prepost.ensures()));
+            } else if (prepost.candidateEnsures() != null && !eliminatedPrePosts.contains(prepost)) {
+                candidatePrePostConditions.add(prepost.candidateEnsures().condition);
+                result = SMTFactory.merge(result, visit(prepost.candidateEnsures()));
+            }
         }
 
         // Add assignments
@@ -106,22 +125,22 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
     @Override
     public SMT visitRequires(SimpleCParser.RequiresContext ctx) {
-        SMT condition = visit(ctx.condition);
-        implicationStore.pushImplication(condition);
-        return SMTFactory.createEmpty();
+        return assumeCondition(ctx.condition);
+    }
+
+    @Override
+    public SMT visitCandidateRequires(SimpleCParser.CandidateRequiresContext ctx) {
+        return assumeCondition(ctx.condition);
     }
 
     @Override
     public SMT visitEnsures(SimpleCParser.EnsuresContext ctx) {
-        SMT assertion = visit(ctx.condition);
+        return assertCondition(ctx.condition);
+    }
 
-        SMT pred = implicationStore.getFullImplication();
-        if( !pred.isEmpty() ) {
-            assertion = SMTFactory.createImplication(pred, assertion);
-        }
-
-        assertions.push(assertion);
-        return SMTFactory.createEmpty();
+    @Override
+    public SMT visitCandidateEnsures(SimpleCParser.CandidateEnsuresContext ctx) {
+        return assertCondition(ctx.condition);
     }
 
     @Override
@@ -186,6 +205,11 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             assertCondition(exprContext);
         }
 
+        for (SimpleCParser.ExprContext exprContext : summarisation.getCandidatePreconditions()) {
+            candidatePrePostConditions.add(exprContext);
+            assertCondition(exprContext);
+        }
+
         havoc(summarisation.getModset());
 
         String returnVar = ctx.callee.getText() + "_ret";
@@ -194,6 +218,10 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         returnExpr = newReturnExpr;
 
         for (SimpleCParser.ExprContext exprContext : summarisation.getPostconditions()) {
+            assumeCondition(exprContext);
+        }
+
+        for (SimpleCParser.ExprContext exprContext : summarisation.getCandidatePostconditions()) {
             assumeCondition(exprContext);
         }
 
@@ -224,6 +252,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
             unwindingAssertionIds.add(assertionId);
         } else if (candidateInvariantConditions.contains(condition)) {
             assertionToCandidateInvariantMap.put(assertionId, (SimpleCParser.CandidateInvariantContext) condition.getParent());
+        } else if (candidatePrePostConditions.contains(condition)) {
+            assertionToCandidatePrePostMap.put(assertionId, (SimpleCParser.PrepostContext) condition.getParent().getParent());
         }
 
         return SMTFactory.createEmpty();
