@@ -85,7 +85,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         for (SimpleCParser.PrepostContext prepost : ctx.contract) {
             if( prepost.requires() != null ) {
                 result = SMTFactory.merge(result, (visit(prepost.requires())));
-            } else if (prepost.candidateRequires() != null) {
+            } else if (prepost.candidateRequires() != null && !eliminatedPrePosts.contains(prepost)) {
                 result = SMTFactory.merge(result, visit(prepost.candidateRequires()));
             }
         }
