@@ -7,42 +7,52 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 public class ImplicationStore {
-    private Deque<ConditionStore> implicationsStack = new ArrayDeque<>();
-    private Deque<SMT> predicate = new ArrayDeque<>();
+
+    private ConditionStore assumes = new ConditionStore();
+    private ConditionStore predicates = new ConditionStore();
 
     public ImplicationStore() {
-        implicationsStack.push(new ConditionStore());
     }
 
     public void enterScope(SMT predicate) {
-        this.predicate.push(predicate);
-        implicationsStack.push(new ConditionStore());
+        predicates.push(predicate);
     }
 
     public void exitScope() {
-        if (!predicate.isEmpty()) {
-            ConditionStore predicatedConditions = implicationsStack.pop();
-            implicationsStack.peek().pushConditions(predicatedConditions, predicate.pop());
-        } else {
-            implicationsStack.pop();
-        }
+        predicates.pop();
     }
 
-    public void pushImplication(SMT implication) {
-        implication = (!predicate.isEmpty() && implication != predicate.peek()) ? SMTFactory.createImplication(predicate.peek(), implication) : implication;
-        implicationsStack.peek().push(implication);
+    public void addAssume(SMT assume) {
+        assumes.push(SMTFactory.createImplication(predicates.getFullCondition(), assume));
     }
 
     public SMT getFullImplication() {
+
+        if(assumes.isEmpty()) return predicates.getFullCondition();
+        if(predicates.isEmpty()) return assumes.getFullCondition();
+
+        return SMTFactory.createAnd(predicates.getFullCondition(), assumes.getFullCondition());
+
+        /*
         SMT result = SMTFactory.createEmpty();
 
-        for (ConditionStore conditions : implicationsStack) {
+        for (ConditionStore conditions : predicates) {
             if (result.isEmpty()) {
                 result = conditions.getFullCondition();
             } else {
                 result = SMTFactory.createAnd(result, conditions.getFullCondition());
             }
         }
+
+        for (ConditionStore conditions : assumes) {
+            if (result.isEmpty()) {
+                result = conditions.getFullCondition();
+            } else {
+                result = SMTFactory.createAnd(result, conditions.getFullCondition());
+            }
+        }
+
         return result;
+        */
     }
 }
