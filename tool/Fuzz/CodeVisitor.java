@@ -13,6 +13,11 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
     public static final String RESULT_VARIABLE = "RESULT";
 
     private CodeExpressionUtils expressionUtils = new CodeExpressionUtils(this);
+    private int fuzz;
+
+    public CodeVisitor(int fuzz) {
+        this.fuzz = fuzz;
+    }
 
     @Override
     protected Code defaultResult() {
@@ -31,7 +36,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
     @Override
     public Code visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return CodeFactory.createDeclaration(ctx.ident.getText());
+        return CodeFactory.createDeclaration(ctx.ident.getText(), fuzz);
     }
 
     @Override
@@ -63,7 +68,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
         Code returnCode = visit(ctx.returnExpr);
 
-        statements.add(CodeFactory.createDeclaration(RESULT_VARIABLE));
+        statements.add(CodeFactory.createDeclaration(RESULT_VARIABLE, 0));
         statements.add(CodeFactory.createAssign(RESULT_VARIABLE, returnCode));
 
         for(SimpleCParser.PrepostContext prepostContext : ctx.prepost()) {
@@ -87,7 +92,15 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
         Code condition = visit(ctx.condition);
         Code body = visit(ctx.body);
 
-        return CodeFactory.createWhile(condition, body);
+        List<Code> invarients = new ArrayList<>();
+
+        for(SimpleCParser.LoopInvariantContext loopInvariantContext: ctx.loopInvariant()) {
+            if(loopInvariantContext.invariant() != null) {
+                invarients.add(visit(loopInvariantContext.invariant()));
+            }
+        }
+
+        return CodeFactory.createWhile(condition, body, new CompositeCode(invarients));
     }
 
     @Override
@@ -182,7 +195,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
     @Override
     public Code visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        return CodeFactory.createHavoc(ctx.var.getText());
+        return CodeFactory.createHavoc(ctx.var.getText(), fuzz);
     }
 
     @Override
@@ -193,6 +206,22 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
     @Override
     public Code visitCallStmt(SimpleCParser.CallStmtContext ctx) {
         return new SingleCode(ctx.getText() + "\n");
+    }
+
+    @Override
+    public Code visitInvariant(SimpleCParser.InvariantContext ctx) {
+        return CodeFactory.createAssert(visit(ctx.condition));
+    }
+
+    @Override
+    public Code visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
+        List<Code> code = new ArrayList<>();
+
+        for(SimpleCParser.StmtContext stmnt : ctx.stmts) {
+            code.add(visit(stmnt));
+        }
+
+        return CodeFactory.createBlock(new CompositeCode(code));
     }
 
     /**
@@ -245,11 +274,6 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
     }
 
     @Override
-    public Code visitInvariant(SimpleCParser.InvariantContext ctx) {
-        throw new RuntimeException("Invalid fuzz program");
-    }
-
-    @Override
     public Code visitCandidateInvariant(SimpleCParser.CandidateInvariantContext ctx) {
         throw new RuntimeException("Invalid fuzz program");
     }
@@ -257,17 +281,6 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
     @Override
     public Code visitOldExpr(SimpleCParser.OldExprContext ctx) {
         throw new RuntimeException("Invalid fuzz program");
-    }
-
-    @Override
-    public Code visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
-        List<Code> code = new ArrayList<>();
-
-        for(SimpleCParser.StmtContext stmnt : ctx.stmts) {
-            code.add(visit(stmnt));
-        }
-
-        return CodeFactory.createBlock(new CompositeCode(code));
     }
 }
 
