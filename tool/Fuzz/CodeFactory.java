@@ -66,8 +66,8 @@ public class CodeFactory {
         );
     }
 
-    public static Code createDeclaration(String text) {
-        return createFromFormat("int %s = 0;\n", text);
+    public static Code createDeclaration(String text, int fuzz) {
+        return createFromFormat("int %s = %d;\n", text, fuzz);
     }
 
     public static Code createAssign(String lhs, Code rhs) {
@@ -82,10 +82,16 @@ public class CodeFactory {
         return createFromFormat("exit(0);\n");
     }
 
-    public static Code createWhile(Code condition, Code body) {
+    public static Code createWhile(Code condition, Code body, Code invarient) {
         return new CompositeCode(
+                invarient,
                 createFromFormat("while(%s)\n", condition),
-                createBlock(body)
+                createBlock(
+                        new CompositeCode(
+                                body,
+                                invarient
+                        )
+                )
         );
     }
 
@@ -141,8 +147,8 @@ public class CodeFactory {
         return createFromFormat("%s %s %s", left, operator, right);
     }
 
-    public static Code createHavoc(String text) {
-        return createFromFormat("%s = 0;\n", text); //todo
+    public static Code createHavoc(String text, int fuzz) {
+        return createFromFormat("%s = %d;\n", text, fuzz); //todo
     }
 
 
