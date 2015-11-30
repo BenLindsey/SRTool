@@ -17,9 +17,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.rmi.server.ExportException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SRTool {
 	public static boolean verbose = false;
@@ -44,11 +42,23 @@ public class SRTool {
 					if(!fuzz) {
 						new Z3().validate(ctx, commandLine.hasOption("lu"));
 					} else {
-						Code code = new CodeVisitor().visitProgram(ctx);
-						CodeRunner runner = new CodeRunner(code);
+						List<List<Integer>> fuzzes = Arrays.asList(
+								Collections.singletonList(0),
+								Collections.singletonList(10000),
+								Collections.singletonList(64000),
+								Arrays.asList(200, 60),
+								Arrays.asList(1000, 60),
+								Arrays.asList(5, 1000)
+						);
 
-						if(runner.execute() > 0) {
-							System.out.println("INCORRECT");
+						for(List<Integer> fuzzVariables : fuzzes) {
+							Code code = new CodeVisitor(fuzzVariables).visitProgram(ctx);
+							CodeRunner runner = new CodeRunner(code);
+
+							if(runner.execute() > 0) {
+								System.out.println("INCORRECT");
+								System.exit(0);
+							}
 						}
 
 					}

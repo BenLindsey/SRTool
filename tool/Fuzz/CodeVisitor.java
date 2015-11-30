@@ -5,6 +5,7 @@ import parser.SimpleCParser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by bl2312 on 28/11/15.
@@ -13,10 +14,19 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
     public static final String RESULT_VARIABLE = "RESULT";
 
     private CodeExpressionUtils expressionUtils = new CodeExpressionUtils(this);
-    private int fuzz;
+    private List<Integer> fuzzInputs;
+    private int fuzzIndex = 0;
 
-    public CodeVisitor(int fuzz) {
-        this.fuzz = fuzz;
+    public CodeVisitor(List<Integer> fuzzInputs) {
+        this.fuzzInputs = fuzzInputs;
+    }
+
+    private int getFuzzInput() {
+        if(fuzzIndex >= fuzzInputs.size()) {
+            fuzzIndex = 0;
+        }
+
+        return fuzzInputs.get(fuzzIndex++);
     }
 
     @Override
@@ -36,7 +46,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
     @Override
     public Code visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return CodeFactory.createDeclaration(ctx.ident.getText(), fuzz);
+        return CodeFactory.createDeclaration(ctx.ident.getText(), getFuzzInput());
     }
 
     @Override
@@ -195,7 +205,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
     @Override
     public Code visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
-        return CodeFactory.createHavoc(ctx.var.getText(), fuzz);
+        return CodeFactory.createHavoc(ctx.var.getText(), getFuzzInput());
     }
 
     @Override
