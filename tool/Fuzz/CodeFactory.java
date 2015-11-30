@@ -74,8 +74,8 @@ public class CodeFactory {
         return createFromFormat("%s = %s;\n", lhs, rhs);
     }
 
-    public static Code createReturn(Code code) {
-        return createFromFormat("return 0;\n");
+    public static Code createReturn(Code code, boolean main) {
+        return createFromFormat("return %s;\n", main? "0" : code);
     }
 
     public static Code createExit() {
