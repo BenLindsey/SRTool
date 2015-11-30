@@ -80,4 +80,15 @@ public class CompositeCode implements Code {
         return true;
     }
 
+    @Override
+    public int countFunctions() {
+        int acc = 0;
+
+        for(Code code : codes) {
+            acc += code.countFunctions();
+        }
+
+        return acc;
+    }
+
 }

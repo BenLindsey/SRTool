@@ -2,19 +2,32 @@ package tool.Fuzz;
 
 import parser.SimpleCBaseVisitor;
 import parser.SimpleCParser;
-import tool.SMTs.SMT;
-import tool.SMTs.SMTFactory;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by bl2312 on 28/11/15.
  */
 public class CodeVisitor extends SimpleCBaseVisitor<Code> {
-
     public static final String RESULT_VARIABLE = "RESULT";
 
     private CodeExpressionUtils expressionUtils = new CodeExpressionUtils(this);
+    private List<Integer> fuzzInputs;
+    private int fuzzIndex = 0;
+
+    public CodeVisitor(List<Integer> fuzzInputs) {
+        this.fuzzInputs = fuzzInputs;
+    }
+
+    private int getFuzzInput() {
+        if(fuzzIndex >= fuzzInputs.size()) {
+            fuzzIndex = 0;
+        }
+
+        return fuzzInputs.get(fuzzIndex++);
+    }
 
     @Override
     protected Code defaultResult() {
@@ -33,7 +46,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
     @Override
     public Code visitVarDecl(SimpleCParser.VarDeclContext ctx) {
-        return CodeFactory.createDeclaration(ctx.ident.getText());
+        return CodeFactory.createDeclaration(ctx.ident.getText(), getFuzzInput());
     }
 
     @Override
@@ -45,10 +58,12 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
     @Override
     public Code visitProcedureDecl(SimpleCParser.ProcedureDeclContext ctx) {
-        ArrayList<Code> statements = new ArrayList<>();
+        List<Code> statements = new ArrayList<>();
+
+        List<String> params = new ArrayList<>();
 
         for(SimpleCParser.FormalParamContext paramContext : ctx.formalParam()) {
-            statements.add(CodeFactory.createDeclaration(paramContext.ident.getText()));
+            params.add(paramContext.ident.getText());
         }
 
         for(SimpleCParser.PrepostContext prepostContext : ctx.prepost()) {
@@ -63,7 +78,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
         Code returnCode = visit(ctx.returnExpr);
 
-        statements.add(CodeFactory.createDeclaration(RESULT_VARIABLE));
+        statements.add(CodeFactory.createDeclaration(RESULT_VARIABLE, 0));
         statements.add(CodeFactory.createAssign(RESULT_VARIABLE, returnCode));
 
         for(SimpleCParser.PrepostContext prepostContext : ctx.prepost()) {
@@ -74,7 +89,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
 
         statements.add(CodeFactory.createReturn(CodeFactory.createVariable(RESULT_VARIABLE)));
 
-        return CodeFactory.createFunction(ctx.name.getText(), statements);
+        return CodeFactory.createFunction(ctx.name.getText(), params, statements);
     }
 
     @Override
@@ -82,44 +97,31 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
         return CodeFactory.createAssert(visit(ctx.expr()));
     }
 
-
     @Override
     public Code visitWhileStmt(SimpleCParser.WhileStmtContext ctx) {
         Code condition = visit(ctx.condition);
         Code body = visit(ctx.body);
 
-        return CodeFactory.createWhile(condition, body);
+        List<Code> invarients = new ArrayList<>();
+
+        for(SimpleCParser.LoopInvariantContext loopInvariantContext: ctx.loopInvariant()) {
+            if(loopInvariantContext.invariant() != null) {
+                invarients.add(visit(loopInvariantContext.invariant()));
+            }
+        }
+
+        return CodeFactory.createWhile(condition, body, new CompositeCode(invarients));
     }
 
     @Override
     public Code visitIfStmt(SimpleCParser.IfStmtContext ctx) {
         Code condition = visit(ctx.condition);
         Code thenBlock = visit(ctx.thenBlock);
-        Code elseBlock = visit(ctx.elseBlock);
 
-        return CodeFactory.createIf(condition, thenBlock, elseBlock);
+        return ctx.elseBlock == null ? CodeFactory.createIf(condition, thenBlock) :
+                CodeFactory.createIf(condition, thenBlock, visit(ctx.elseBlock));
     }
 
-    @Override
-    public Code visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
-        return CodeFactory.createEmpty();
-        //return CodeFactory.createAssume(visit(ctx.condition));
-    }
-
-    @Override
-    public Code visitRequires(SimpleCParser.RequiresContext ctx) {
-        Code condition = visit(ctx.condition);
-
-        return CodeFactory.createEmpty();
-        //return CodeFactory.createAssume(condition);
-    }
-
-    @Override
-    public Code visitEnsures(SimpleCParser.EnsuresContext ctx) {
-        Code condition = visit(ctx.condition);
-
-        return CodeFactory.createAssert(condition);
-    }
 
     @Override
     public Code visitResultExpr(SimpleCParser.ResultExprContext ctx) {
@@ -201,6 +203,94 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
         return CodeFactory.createNumber(ctx.number.getText());
     }
 
-    //todo OLD, ASSUME, REQUIRES,
+    @Override
+    public Code visitHavocStmt(SimpleCParser.HavocStmtContext ctx) {
+        return CodeFactory.createHavoc(ctx.var.getText(), getFuzzInput());
+    }
+
+    @Override
+    public Code visitParenExpr(SimpleCParser.ParenExprContext ctx) {
+        return CodeFactory.createParenthesis(visit(ctx.arg));
+    }
+
+    @Override
+    public Code visitCallStmt(SimpleCParser.CallStmtContext ctx) {
+        return new SingleCode(ctx.getText() + "\n");
+    }
+
+    @Override
+    public Code visitInvariant(SimpleCParser.InvariantContext ctx) {
+        return CodeFactory.createAssert(visit(ctx.condition));
+    }
+
+    @Override
+    public Code visitBlockStmt(SimpleCParser.BlockStmtContext ctx) {
+        List<Code> code = new ArrayList<>();
+
+        for(SimpleCParser.StmtContext stmnt : ctx.stmts) {
+            code.add(visit(stmnt));
+        }
+
+        return CodeFactory.createBlock(new CompositeCode(code));
+    }
+
+    /**
+     * UNHANDLED CASES
+     *
+     *
+     *
+     *
+     */
+
+    @Override
+    public Code visitAssumeStmt(SimpleCParser.AssumeStmtContext ctx) {
+        return CodeFactory.createAssume(visit(ctx.condition));
+    }
+
+    @Override
+    public Code visitPrepost(SimpleCParser.PrepostContext ctx) {
+        if(ctx.requires() != null) {
+            return CodeFactory.createAssume(visit(ctx.requires().condition));
+        } else if(ctx.ensures() != null) {
+            return CodeFactory.createAssert(visit(ctx.ensures().condition));
+        }
+
+        throw new RuntimeException("Invalid fuzz program");
+    }
+
+    @Override
+    public Code visitRequires(SimpleCParser.RequiresContext ctx) {
+        throw new RuntimeException("Invalid fuzz program");
+    }
+
+    @Override
+    public Code visitEnsures(SimpleCParser.EnsuresContext ctx) {
+        throw new RuntimeException("Invalid fuzz program");
+    }
+
+    @Override
+    public Code visitCandidateRequires(SimpleCParser.CandidateRequiresContext ctx) {
+        throw new RuntimeException("Invalid fuzz program");
+    }
+
+    @Override
+    public Code visitCandidateEnsures(SimpleCParser.CandidateEnsuresContext ctx) {
+        throw new RuntimeException("Invalid fuzz program");
+    }
+
+    @Override
+    public Code visitLoopInvariant(SimpleCParser.LoopInvariantContext ctx) {
+        throw new RuntimeException("Invalid fuzz program");
+    }
+
+    @Override
+    public Code visitCandidateInvariant(SimpleCParser.CandidateInvariantContext ctx) {
+        throw new RuntimeException("Invalid fuzz program");
+    }
+
+    @Override
+    public Code visitOldExpr(SimpleCParser.OldExprContext ctx) {
+        throw new RuntimeException("Invalid fuzz program");
+    }
 }
 

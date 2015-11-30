@@ -9,6 +9,7 @@ DIR=$1
 
 OUTPUT=$(timeout --signal=9 175 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 &)
 OUTPUT_LU=$(timeout --signal=9 175 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 -lu &)
+OUTPUT_FUZZ=$(timeout --signal=9 175 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 -z &)
 wait
 
 checkValidOutput() {
@@ -27,7 +28,9 @@ if [ $VALID_OUTPUT -ne 1 ] || [ $VALID_OUTPUT_LU -ne 1 ]; then
     exit 0;
 fi
 
-if [ "$OUTPUT" == "$OUTPUT_LU" ]; then
+if [ "$OUTPUT_FUZZ" == "INCORRECT" ]; then
+    echo "INCORRECT" 
+elif [ "$OUTPUT" == "$OUTPUT_LU" ]; then
     echo $OUTPUT;
 elif [ "$OUTPUT_LU" == "CORRECT" ]; then
     echo "CORRECT";

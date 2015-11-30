@@ -42,4 +42,9 @@ public class SingleCode implements Code {
     public boolean isEmpty() {
         return text.isEmpty();
     }
+
+    @Override
+    public int countFunctions() {
+        return isFunction ? 1 : 0;
+    }
 }
