@@ -267,10 +267,8 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
     private SMT assumeCondition(SimpleCParser.ExprContext condition) {
         SMT assumption = condition == FALSE_EXPRESSION ? SMTFactory.createBool(false) : visit(condition);
 
-        implicationStore.pushImplication(assumption);
-
+        implicationStore.addAssume(assumption);
         return SMTFactory.createEmpty();
-
     }
 
     @Override
@@ -427,7 +425,6 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         variables.enterScope();
         implicationStore.enterScope(predicate);
-        implicationStore.pushImplication(predicate);
         builder = SMTFactory.merge(builder, super.visitBlockStmt(ctx.thenBlock));
         implicationStore.exitScope();
         thenBlock = variables.exitScope();
@@ -435,7 +432,6 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
         if (ctx.elseBlock != null) {
             variables.enterScope();
             implicationStore.enterScope(notPredicate);
-            implicationStore.pushImplication(notPredicate);
             builder = SMTFactory.merge(builder, super.visitBlockStmt(ctx.elseBlock));
             implicationStore.exitScope();
             elseBlock = variables.exitScope();
@@ -489,11 +485,6 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         return result;
     }
-
-//    @Override
-//    public SMTs visitCandidateInvariant(SimpleCParser.CandidateInvariantContext ctx) {
-//        return // todo SMTFactory.createCandidateInvariant(visit(ctx.condition));
-//    }
 
     @Override
     public SMT visitTernExpr(SimpleCParser.TernExprContext ctx) {
