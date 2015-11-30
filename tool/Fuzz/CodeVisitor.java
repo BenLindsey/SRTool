@@ -87,7 +87,7 @@ public class CodeVisitor extends SimpleCBaseVisitor<Code> {
             }
         }
 
-        statements.add(CodeFactory.createReturn(CodeFactory.createVariable(RESULT_VARIABLE)));
+        statements.add(CodeFactory.createReturn(CodeFactory.createVariable(RESULT_VARIABLE), ctx.name.getText().equals("main")));
 
         return CodeFactory.createFunction(ctx.name.getText(), params, statements);
     }
