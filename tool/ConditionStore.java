@@ -6,14 +6,19 @@ import tool.SMTs.SMTFactory;
 import java.util.*;
 
 public class ConditionStore {
-    private List<SMT> conditions = new ArrayList<>();
+    private Deque<SMT> conditions = new ArrayDeque<>();
 
     private SMT fullCondition = SMTFactory.createEmpty();
     private boolean scratched = false;
 
     public void push(SMT condition) {
         scratched = true;
-        conditions.add(condition);
+        conditions.push(condition);
+    }
+
+    public void pop() {
+        scratched = true;
+        conditions.pop();
     }
 
     public void pushConditions(ConditionStore conditions, SMT predicate) {
@@ -54,9 +59,5 @@ public class ConditionStore {
 
     public int size() {
         return conditions.size();
-    }
-
-    public SMT get(int i) {
-        return conditions.get(i);
     }
 }
