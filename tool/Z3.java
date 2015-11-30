@@ -15,7 +15,7 @@ import java.util.Map;
 public class Z3 {
     private static final int TIMEOUT = 30;
     private static final int MIN_LOOP_UNROLLING_DEPTH = 1;
-    private static final int MAX_LOOP_UNROLLING_DEPTH = 1000;
+    private static final int MAX_LOOP_UNROLLING_DEPTH = 1024;
 
     private boolean verbose = SRTool.verbose;
 
