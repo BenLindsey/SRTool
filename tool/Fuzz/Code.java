@@ -11,4 +11,6 @@ public interface Code {
     Code ensureMainFunction();
 
     boolean isEmpty();
+
+    int countFunctions();
 }
