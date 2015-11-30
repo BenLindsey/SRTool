@@ -1,0 +1,67 @@
+\documentclass[11pt]{article}  
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
+\usepackage{float}
+\usepackage{color}
+\definecolor{pblue}{rgb}{0.13,0.13,1}
+\definecolor{pgreen}{rgb}{0,0.5,0}
+\definecolor{pred}{rgb}{0.9,0,0}
+\definecolor{pgrey}{rgb}{0.46,0.45,0.48}
+
+\usepackage{svg}
+\usepackage{graphicx}
+\graphicspath{{../images/}}
+\usepackage[margin=1in]{geometry} 
+\geometry{a4paper}  
+\usepackage{listings}
+\lstset{language=Java,
+  showspaces=false,
+  showtabs=false,
+  breaklines=true,
+  showstringspaces=false,
+  breakatwhitespace=true,
+  commentstyle=\color{pgreen},
+  keywordstyle=\color{pblue},
+  stringstyle=\color{pred},
+  basicstyle=\ttfamily,
+  moredelim=[il][\textcolor{pgrey}]{$$},
+  moredelim=[is][\textcolor{pgrey}]{\%\%}{\%\%}
+}
+
+\title{Software Reliability}
+\author{Finlay Curran, Jaime Lennox, Ben Lindsey}
+
+% Topics that matter are:
+% 1. Data structures and their initialisation
+% 2. Neighbour management
+% 3. Recomputation, and convergence to shortest paths (mydist message handling)
+% 4. Detecting failures and repairs using failure detectors (open and closed
+% message handling)
+%
+% Follow the experimental design outlined in §A and use one of the provided
+% topologies to produce at least one graph with your implementation.
+
+\begin{document}
+\maketitle
+
+The report should focus on:
+\begin{itemize}
+\item  Describing strategies you implemented to enable bug-finding and verification, and how you combined
+these strategies into an overall tool.
+\item Describing how you went about evaluating the effectiveness of your strategies, and any activities you
+undertook to check the correct operation of your tool.
+\item Describing any aspects of your design that you regard as noteworthy (e.g., if you deliberately deviated
+from the techniques described in the lectures because you could see opportunities for improved speed of
+verification and/or ease of implementation).
+\end{itemize}
+Marks for the report will be awarded primarily for good ideas and insights, and evidence of a thorough
+evaluation of your tool. Some marks will also be reserved for the quality of writing and presentation.
+
+\section*{Bounded Model Checking}
+
+
+\section*{Fuzz Testing}
+
+
+\end{document}  
