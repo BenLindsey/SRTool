@@ -5,18 +5,20 @@ import util.ProcessExec;
 import util.ProcessTimeoutException;
 
 import java.io.*;
+import java.util.UUID;
 
 /**
  * Created by bl2312 on 28/11/15.
  */
 public class CodeRunner {
-    public static final String SOURCE_NAME = "code.c";
-    public static final String EXECUTABLE_NAME = "code";
+    private static final String OUTPUT_DIR = "/tmp";
+    public String SOURCE_NAME = UUID.randomUUID().toString() + ".c";
+    public String EXECUTABLE_NAME = UUID.randomUUID().toString();
 
     private Code code;
 
     public CodeRunner(Code code) {
-        if(!code.hasMainFunction() && code.countFunctions() > 1) {
+        if(code.countFunctions() > 1) {
             throw new RuntimeException("Invalid fuzz program");
         }
 
@@ -36,13 +38,13 @@ public class CodeRunner {
             System.out.println("Compiling:\n" + code);
         }
 
-        try(PrintWriter out = new PrintWriter(SOURCE_NAME)) {
+        try(PrintWriter out = new PrintWriter(OUTPUT_DIR + "/" + SOURCE_NAME)) {
             out.println(code);
         }
     }
 
     private void compileSourceFile() throws IOException, InterruptedException {
-        Process process = Runtime.getRuntime().exec(String.format("gcc %s -o %s", SOURCE_NAME, EXECUTABLE_NAME));
+        Process process = Runtime.getRuntime().exec(String.format("gcc %s/%s -o %s/%s", OUTPUT_DIR, SOURCE_NAME, OUTPUT_DIR, EXECUTABLE_NAME));
 
         process.waitFor();
 
@@ -59,7 +61,7 @@ public class CodeRunner {
     }
 
     private int executeOutputFile() throws IOException, InterruptedException {
-        Process process = Runtime.getRuntime().exec(String.format("./%s", EXECUTABLE_NAME));
+        Process process = Runtime.getRuntime().exec(String.format("%s/%s", OUTPUT_DIR, EXECUTABLE_NAME));
 
         process.waitFor();
 
