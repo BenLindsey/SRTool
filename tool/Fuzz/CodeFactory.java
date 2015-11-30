@@ -1,5 +1,7 @@
 package tool.Fuzz;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -26,16 +28,28 @@ public class CodeFactory {
         );
     }
 
-    public static Code createFunction(String name, List<Code> statements) {
+    public static Code createFunction(String name, List<String> params, List<Code> statements) {
         return new CompositeCode(
-                createFunctionHeader(name),
+                createFunctionHeader(name, params),
                 createBlock(new CompositeCode(statements))
         );
     }
-
     public static SingleCode createFunctionHeader(String name) {
+        return createFunctionHeader(name, new ArrayList<String>());
+    }
+
+
+    public static SingleCode createFunctionHeader(String name, List<String> params) {
+        String paramList = "";
+
+        if(!name.equals("main")) {
+            for(String param: params) {
+                paramList += (paramList.length() > 0 ? ", " : "") + "int " + param;
+            }
+        }
+
         return new SingleCode(
-                String.format("int %s()\n", name),
+                String.format("int %s(%s)\n", name, paramList),
                 true,
                 name.equals("main")
         );
@@ -53,7 +67,7 @@ public class CodeFactory {
     }
 
     public static Code createDeclaration(String text) {
-        return createFromFormat("int %s;\n", text);
+        return createFromFormat("int %s = 0;\n", text);
     }
 
     public static Code createAssign(String lhs, Code rhs) {
@@ -61,7 +75,11 @@ public class CodeFactory {
     }
 
     public static Code createReturn(Code code) {
-        return createFromFormat("return %s;\n", code);
+        return createFromFormat("return 0;\n");
+    }
+
+    public static Code createExit() {
+        return createFromFormat("exit(0);\n");
     }
 
     public static Code createWhile(Code condition, Code body) {
@@ -72,14 +90,14 @@ public class CodeFactory {
     }
 
     public static Code createAssume(Code condition) {
-        return createIf(createNot(condition), createReturn(createNumber(0)));
+        return createIf(createNot(condition), createExit());
     }
 
     private static Code createNot(Code condition) {
         return createFromFormat("!(%s)", condition);
     }
 
-    private static Code createIf(Code condition, Code then) {
+    public static Code createIf(Code condition, Code then) {
         return new CompositeCode(
                 createFromFormat("if(%s)\n", condition),
                 createBlock(then)
@@ -121,5 +139,14 @@ public class CodeFactory {
 
     public static Code createInfix(String operator, Code left, Code right) {
         return createFromFormat("%s %s %s", left, operator, right);
+    }
+
+    public static Code createHavoc(String text) {
+        return createFromFormat("%s = 0;\n", text); //todo
+    }
+
+
+    public static Code createParenthesis(Code visit) {
+        return createFromFormat("(%s)", visit);
     }
 }

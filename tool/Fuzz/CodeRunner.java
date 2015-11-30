@@ -16,6 +16,10 @@ public class CodeRunner {
     private Code code;
 
     public CodeRunner(Code code) {
+        if(!code.hasMainFunction() && code.countFunctions() > 1) {
+            throw new RuntimeException("Invalid fuzz program");
+        }
+
         this.code = CodeFactory.createExecutable(code);
     }
 
@@ -24,7 +28,6 @@ public class CodeRunner {
 
         compileSourceFile();
 
-        //todo really make sure we only return an error when we should
         return executeOutputFile();
     }
 
@@ -45,31 +48,39 @@ public class CodeRunner {
 
         int returnCode = process.exitValue();
 
-        if(returnCode != 0) {
-            throw(new IOException("Failed to compile"));
+
+        if(returnCode > 0) {
+            if(SRTool.verbose) {
+                printErrorStream(process, returnCode, "compile");
+            }
+
+            throw(new IOException("Failed to compile:"));
         }
     }
 
     private int executeOutputFile() throws IOException, InterruptedException {
         Process process = Runtime.getRuntime().exec(String.format("./%s", EXECUTABLE_NAME));
 
-        //todo have timeout
         process.waitFor();
 
         int returnCode = process.exitValue();
 
         if(SRTool.verbose && returnCode > 0) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-            String line;
-
-            System.out.println(String.format("Exited with error %d:", returnCode));
-            while((line = reader.readLine()) != null) {
-                System.out.println(line);
-            }
-
-            System.out.println("");
+            printErrorStream(process, returnCode, "execute");
         }
 
         return returnCode;
+    }
+
+    private void printErrorStream(Process process, int returnCode, String stage) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        String line;
+
+        System.out.println(String.format("%s with error %d:", stage, returnCode));
+        while((line = reader.readLine()) != null) {
+            System.out.println(line);
+        }
+
+        System.out.println("");
     }
 }
