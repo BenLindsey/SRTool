@@ -276,6 +276,10 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         if( UNROLL_LOOPS ) return visitWhileStmtUnroll(ctx);
 
+        if (ctx.invariantAnnotations.isEmpty()) {
+            new CandidateInvariants(eliminatedCandidateInvariants).addInferredInvariants(ctx);
+        }
+
         SMT result = SMTFactory.createEmpty();
 
         SimpleCParser.ExprContext condition = ctx.condition;

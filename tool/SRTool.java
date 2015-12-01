@@ -37,7 +37,7 @@ public class SRTool {
 				try {
 					boolean fuzz = commandLine.hasOption("z");
 					String fileName = commandLine.getOptionValue("f");
-					ProgramContext ctx = getContext(fileName);
+					ProgramContext ctx = Antlr.getProgramContextFromFile(fileName);
 
 					if(!fuzz) {
 						new Z3().validate(ctx, commandLine.hasOption("lu"));
@@ -75,29 +75,6 @@ public class SRTool {
 			printHelp();
 		}
     }
-
-	private static ProgramContext getContext(String fileName) throws IOException {
-		ANTLRInputStream input = new ANTLRInputStream(new FileInputStream(fileName));
-		SimpleCLexer lexer = new SimpleCLexer(input);
-		CommonTokenStream tokens = new CommonTokenStream(lexer);
-		SimpleCParser parser = new SimpleCParser(tokens);
-		SimpleCParser.ProgramContext ctx = parser.program();
-		if(parser.getNumberOfSyntaxErrors() > 0) {
-			System.exit(1);
-		}
-		Typechecker tc = new Typechecker();
-		tc.visit(ctx);
-		tc.resolve();
-		if(tc.hasErrors()) {
-			System.err.println("Errors were detected when typechecking " + fileName + ":");
-			for(String err : tc.getErrors()) {
-				System.err.println("  " + err);
-			}
-			System.exit(1);
-		}
-
-		return ctx;
-	}
 
 	private static Options getCommandLineOptions() {
 		Options options = new Options();
