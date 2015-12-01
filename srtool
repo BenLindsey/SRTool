@@ -28,6 +28,14 @@ checkValidOutput() {
 VALID_OUTPUT=$(checkValidOutput $OUTPUT)
 VALID_OUTPUT_LU=$(checkValidOutput $OUTPUT_LU)
 
+if [ "$OUTPUT_LU" == "CORRECT" ]; then
+    echo "CORRECT";
+    exit 0;
+elif [ "$OUTPUT" == "CORRECT" ]; then
+    echo "CORRECT";
+    exit 0;
+fi
+
 if [ $VALID_OUTPUT -ne 1 ] || [ $VALID_OUTPUT_LU -ne 1 ]; then
     echo "UNKNOWN";
     exit 0;
@@ -35,12 +43,6 @@ fi
 
 if [ "$OUTPUT" == "$OUTPUT_LU" ]; then
     echo $OUTPUT;
-elif [ "$OUTPUT_LU" == "CORRECT" ]; then
-    echo "CORRECT";
-elif [ "$OUTPUT" == "CORRECT" ]; then
-    echo "CORRECT";
-elif [ "$OUTPUT" == "" ] || [ "$OUTPUT_LU" == "" ]; then
-    echo "UNKNOWN";
 else
     echo "UNKNOWN";
 fi
