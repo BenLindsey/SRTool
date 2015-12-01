@@ -88,7 +88,7 @@ public class CandidateInvariants {
         candidates.addAll(createArithmeticCandidate(lhs, "+", number, rhs));
         candidates.addAll(createArithmeticCandidate(lhs, "-", number, rhs));
         candidates.addAll(createArithmeticCandidate(lhs, "*", number, rhs));
-        candidates.addAll(createArithmeticCandidate(lhs, "-", number, rhs));
+        candidates.addAll(createArithmeticCandidate(lhs, "/", number, rhs));
         return candidates;
     }
 
