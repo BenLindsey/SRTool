@@ -70,20 +70,12 @@ public class CandidateInvariants {
         return parseSimpleProgram(program);
     }
 
-    private Set<SimpleCParser.CandidateInvariantContext> extractCandidateInvariants(List<SimpleCParser.LoopInvariantContext> invariants) {
-        Set<SimpleCParser.CandidateInvariantContext> candidateInvariants = new HashSet<>();
-        for (SimpleCParser.LoopInvariantContext invariant : invariants) {
-            candidateInvariants.add(invariant.candidateInvariant());
-        }
-        return candidateInvariants;
-    }
-
     private List<String> createInequalityCandidates(String var, String rhs) {
         List<String> candidates = new ArrayList<>();
         candidates.add(createBinopCandidate(var, "<", rhs));
         candidates.add(createBinopCandidate(var, "<=", rhs));
         candidates.add(createBinopCandidate(var, ">", rhs));
-        candidates.add(createBinopCandidate(var, "<=", rhs));
+        candidates.add(createBinopCandidate(var, ">=", rhs));
         return candidates;
     }
 
