@@ -74,4 +74,8 @@ public class HoudiniLoopRunner {
     private Z3Result staticallyVerify(SMT funcSMT) {
         return new Z3().getResult(buildProgram(funcSMT));
     }
+
+    public SimpleCSMTVisitor getVisitor() {
+        return visitor;
+    }
 }

@@ -38,8 +38,10 @@ public class VCGenerator {
 
 		SMT funcSMT = proc.accept(visitor);
 
+		HoudiniLoopRunner loopRunner = new HoudiniLoopRunner(visitor, proc, summarisationMap, result.toString());
+
 		if (!visitor.getAssertionToCandidateInvariantMap().isEmpty()) {
-			result.append(new HoudiniLoopRunner(visitor, proc, summarisationMap, result.toString()).eliminateCandidates(funcSMT));
+			result.append(loopRunner.eliminateCandidates(funcSMT));
 		} else {
 			result.append(funcSMT);
 		}
@@ -48,13 +50,13 @@ public class VCGenerator {
 		result.append("(get-model)\n");
 		result.append("(get-value (");
 
-		for(int i = 0; i < visitor.assertionsSize(); i++) {
+		for(int i = 0; i < loopRunner.getVisitor().assertionsSize(); i++) {
 			result.append(" ").append(AssertionCollection.getAssertionName(i));
 		}
 
 		result.append("))\n");
 
-		unwindingAssertionIds = visitor.getUnwindingAssertionIds();
+		unwindingAssertionIds = loopRunner.getVisitor().getUnwindingAssertionIds();
 
 		return result;
 	}
