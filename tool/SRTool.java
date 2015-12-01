@@ -21,6 +21,7 @@ import java.util.*;
 
 public class SRTool {
 	public static boolean verbose = false;
+	public static boolean guessCandidates;
 
 	public static void main(String[] args) throws IOException, InterruptedException {
 		CommandLineParser parser = new DefaultParser();
@@ -35,6 +36,7 @@ public class SRTool {
 			} else {
 				verbose = commandLine.hasOption("v");
 				try {
+					guessCandidates = commandLine.hasOption("g");
 					boolean fuzz = commandLine.hasOption("z");
 					String fileName = commandLine.getOptionValue("f");
 					ProgramContext ctx = Antlr.getProgramContextFromFile(fileName);
@@ -101,6 +103,12 @@ public class SRTool {
 		options.addOption(Option.builder("lu")
 						.longOpt("loop-unwinding")
 						.desc("enable loop unwinding")
+						.build()
+		);
+
+		options.addOption(Option.builder("g")
+						.longOpt("generation")
+						.desc("enable candidate generation")
 						.build()
 		);
 

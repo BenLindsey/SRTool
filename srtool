@@ -7,9 +7,10 @@
 
 DIR=$1
 
-OUTPUT=$(timeout --signal=9 25 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 &)
+OUTPUT=$(timeout --signal=9 15 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 &)
+OUTPUT_G=$(timeout --signal=9 20 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 -g &)
 OUTPUT_LU=$(timeout --signal=9 120 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 -lu &)
-OUTPUT_FUZZ=$(timeout --signal=9 25 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 -z &)
+OUTPUT_FUZZ=$(timeout --signal=9 15 java -cp ${DIR}:${DIR}/antlr-4.5.1-complete.jar:${DIR}/libs/commons-cli-1.3.1.jar tool.SRTool -f $2 -z &)
 wait
 
 if [ "$OUTPUT_FUZZ" == "INCORRECT" ]; then
@@ -32,6 +33,9 @@ if [ "$OUTPUT_LU" == "CORRECT" ]; then
     echo "CORRECT";
     exit 0;
 elif [ "$OUTPUT" == "CORRECT" ]; then
+    echo "CORRECT";
+    exit 0;
+elif [ "$OUTPUT_G" == "CORRECT" ]; then
     echo "CORRECT";
     exit 0;
 fi

@@ -276,7 +276,7 @@ public class SimpleCSMTVisitor extends SimpleCBaseVisitor<SMT> {
 
         if( UNROLL_LOOPS ) return visitWhileStmtUnroll(ctx);
 
-        if (ctx.invariantAnnotations.isEmpty()) {
+        if (SRTool.guessCandidates) {
             new CandidateInvariants(eliminatedCandidateInvariants).addInferredInvariants(ctx);
         }
 
