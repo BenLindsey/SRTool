@@ -13,4 +13,5 @@ public interface SMT {
 
     int getCandidateId();
     SMT withoutCandidate(int failingCandidate);
+    void toString(StringBuilder stringBuilder);
 }

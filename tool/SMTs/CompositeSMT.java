@@ -74,11 +74,16 @@ public class CompositeSMT implements SMT {
 
     @Override
     public String toString() {
-        StringBuilder result = new StringBuilder();
-        for( SMT smt : SMTs ) {
-            result.append(smt.toString());
+        StringBuilder stringBuilder = new StringBuilder();
+        toString(stringBuilder);
+        return stringBuilder.toString();
+    }
+
+    @Override
+    public void toString(StringBuilder stringBuilder) {
+        for (SMT smt : SMTs) {
+            smt.toString(stringBuilder);
         }
-        return result.toString();
     }
 
     @Override
