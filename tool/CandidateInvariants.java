@@ -9,15 +9,18 @@ import java.util.*;
 public class CandidateInvariants {
 
     private Set<SimpleCParser.CandidateInvariantContext> eliminatedCandidateInvariants;
-    private static List<SimpleCParser.LoopInvariantContext> currentInvariants;
+    private static Map<SimpleCParser.WhileStmtContext, List<SimpleCParser.LoopInvariantContext>> currentInvariantsForLoop = new HashMap<>();
 
     public CandidateInvariants(Set<SimpleCParser.CandidateInvariantContext> eliminatedCandidateInvariants) {
         this.eliminatedCandidateInvariants = eliminatedCandidateInvariants;
     }
 
     public void addInferredInvariants(SimpleCParser.WhileStmtContext whileStmtContext) {
+        List<SimpleCParser.LoopInvariantContext> currentInvariants = currentInvariantsForLoop.get(whileStmtContext);
+
         if (currentInvariants == null) {
             currentInvariants = generateInvariants(whileStmtContext);
+            currentInvariantsForLoop.put(whileStmtContext, currentInvariants);
         }
 
         Set<SimpleCParser.LoopInvariantContext> invariants = new HashSet<>();
