@@ -63,4 +63,8 @@ public class SingleSMT implements SMT {
         return expression;
     }
 
+    @Override
+    public void toString(StringBuilder stringBuilder) {
+        stringBuilder.append(expression);
+    }
 }
